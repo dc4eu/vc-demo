@@ -7,3 +7,6 @@ stop:
 	docker-compose -f docker-compose.yaml rm -s -f
 
 restart: stop start
+
+clean: stop
+	docker volume rm datastore_mongo_data_demo

@@ -39,7 +39,7 @@ services:
     expose:
       - 27017
     volumes:
-      - mongo_data:/data
+      - mongo_data_demo:/data
     networks:
       - vc-net
 
@@ -54,6 +54,6 @@ networks:
         - subnet: 172.16.70.0/24
 
 volumes:
-  mongo_data:
+  mongo_data_demo:
 
 
