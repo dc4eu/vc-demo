@@ -1,0 +1,59 @@
+---
+version: "3"
+
+services:
+  datastore:
+    container_name: "vc_datastore"
+    image: docker.sunet.se/dc4eu/datastore:demo-v1
+    restart: always
+    volumes:
+      - ./config.yaml:/config.yaml:ro
+      #links:
+      #- haproxy
+    depends_on:
+      - mongo
+    #  - haproxy
+    networks:
+      - vc-net
+    environment:
+      - "VC_CONFIG_YAML=config.yaml"
+
+  mockas:
+    container_name: vc_mockas
+    image: docker.sunet.se/dc4eu/mockas:demo-v1
+    restart: always
+    volumes:
+      - ./config.yaml:/config.yaml:ro
+    ports:
+      - 8080:8080
+    networks:
+      vc-net:
+        ipv4_address: 172.16.70.100
+    environment:
+      - "VC_CONFIG_YAML=config.yaml"
+
+  mongo:
+    image: mongo:4.0.10
+    container_name: "vc_mongo"
+    restart: always
+    expose:
+      - 27017
+    volumes:
+      - mongo_data:/data
+    networks:
+      - vc-net
+
+networks:
+  vc-net:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-vc-ds-demo
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.70.0/24
+
+volumes:
+  mongo_data:
+
+
