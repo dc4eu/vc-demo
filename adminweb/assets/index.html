@@ -34,7 +34,7 @@
     }
 
     function displayAElement(id) {
-        getElementById(id).style.display = 'inline'; // Använd 'inline' för <a>-element
+        getElementById(id).style.display = 'inline'; // Use 'inline' for <a>-element
     }
 
     function hideAElement(id) {
@@ -49,29 +49,24 @@
         getElementById(id).style.display = 'none';
     }
 
-    /* Hides all secure menu iterm when page is loaded */
-    document.addEventListener('DOMContentLoaded', function () {
-        // Comment out the line below to display secure meny items on page load regardless of auth or not
-        hideSecureMenyItems();
-    });
-
     function hideSecureMenyItems() {
         hideDiv('navbar-start-div');
         hideAElement("do-logout-btn")
         displayAElement("show-login-form-btn")
     }
 
-    function showSecureMenyItems() {
+    function displaySecureMenyItems() {
+        <!-- TODO: JonL: hur få till så att navbar-start-div ritas ut med rätt bredd, nu hamnar alla items under varandra oavsett fönsterbredd -->
         displayDiv('navbar-start-div')
         displayAElement("do-logout-btn")
         hideAElement("show-login-form-btn")
     }
 
     //const { randomUUID } = require('uuid-random');
-    let currentNumber = 0;
+    let currentIdNumber = 0;
     const secureGenerateUUID = () => {
         //TODO: fix in Dockerfile and docker-compose.yaml: return randomUUID();
-        return currentNumber++;
+        return currentIdNumber++;
     };
 
     // const secureGenerateUUID = () => {
@@ -89,31 +84,29 @@
     }
 
     //TODO: Inför kontroll om att användaren med största sannolikhet är inloggad, om ej skicka till login med något meddelande med nedan koncept
-    /*
-        const cookieValue = document.cookie.match(/vcadminwebsession=(.*?)(;|$)/)[1];
 
-        const maxAge = 300; // 5 minuter i sekunder
-
-       if (cookieValue) {
-            // Användaren är inloggad
-            console.log("Användaren är inloggad");
-
-            // Beräkna när cookien upphör att gälla
-            const expiryDate = new Date(Date.now() + maxAge * 1000);
-
-            // Visa en timer som visar hur länge användaren har varit inloggad
-            const timerElement = document.getElementById("timer");
-            const updateTimer = () => {
-            const remainingTime = Math.floor((expiryDate - Date.now()) / 1000);
-            timerElement.textContent = `${remainingTime} sekunder kvar`;
-        };
-            updateTimer();
-            setInterval(updateTimer, 1000);
-        } else {
-            // Användaren är inte inloggad
+    function isLoggedIn() {
+        const cookie = document.cookie
+        if (cookie && cookie.match(/vcadminwebsession=(.*?)(;|$)/)[1]) {
+            console.debug("User is logged in");
+            // TODO: visa en timer när sessionen upphör att gälla om inga nya secure request utförs
+            // // Beräkna när cookien upphör att gälla
+            // const expiryDate = new Date(Date.now() + maxAge * 1000);
+            //
+            // // Visa en timer som visar hur länge användaren har varit inloggad
+            // const timerElement = document.getElementById("timer");
+            // const updateTimer = () => {
+            //     const remainingTime = Math.floor((expiryDate - Date.now()) / 1000);
+            //     timerElement.textContent = `${remainingTime} sekunder kvar`;
+            // };
+            // updateTimer();
+            // setInterval(updateTimer, 1000);
+            return true;
         }
-        console.log("Användaren är inte inloggad");
-    */
+        console.debug("User is not logged in");
+        //Note: Giltighetstiden hanteras av webbläsaren och en cookie försvinner från document.cookie när den har löpt ut.
+        return false;
+    }
 
 
     const addNewRequestResponseArticleToContainer = (articleHeaderText) => {
@@ -334,7 +327,7 @@ ${JSON.stringify(headers)}`);
 
         if (authOK) {
             clearContainer("login-container");
-            showSecureMenyItems();
+            displaySecureMenyItems();
             //TODO: visa menyer som ska vara dolda när man ej är auth - även det sistnämnda behöver fixas (dvs ej visa ~privata
 
             //TODO: show logged in user
@@ -368,7 +361,6 @@ ${JSON.stringify(headers)}`);
                     document.getElementById('do-login-btn').click();
                 }
             });
-            //TODO: visst är denna rad överflödig då samma sak begärs sist i func direkt mot DOM'en? usernameInput.focus();
 
             usernameControl.appendChild(usernameInput);
             usernameField.appendChild(usernameLabel);
@@ -442,10 +434,26 @@ ${JSON.stringify(headers)}`);
             console.debug(`Request header ${key}: ${value}`);
         }
 
-        //TODO: felhantering
+        //TODO: inför felhantering
         await fetch(request);
+        hideSecureMenyItems();
+        clearAllContentContainers();
     }
 
+    // document.addEventListener('DOMContentLoaded', function () {
+    //     // Hides all secure menu iterm when page is loaded
+    //     // Comment out the line below to display secure meny items on page load regardless of auth or not
+    //     hideSecureMenyItems();
+    //
+    // });
+
+    window.addEventListener('load', function () {
+        // Hides all secure menu iterm when page is loaded (including css, images, etc)
+        // Comment out the line below to display secure meny items on page load regardless of auth or not
+        if (!isLoggedIn()) {
+            hideSecureMenyItems();
+        }
+    });
 </script>
 
 <body>
@@ -503,19 +511,18 @@ ${JSON.stringify(headers)}`);
                     </a>
                     <div class="navbar-dropdown">
                         <!-- class="navbar-item is-selected"> -->
-                        <a onclick="fetchJsonAndDisplayInArticleContainerFor('/secure/health')" class="navbar-item">
-                            Health
-                        </a>
-                        <a id="fetch-documents-btn"
-                           onclick="fetchJsonAndDisplayInArticleContainerFor('/secure/documents')"
-                           class="navbar-item">
-                            Documents
-                        </a>
-                        <hr class="navbar-divider">
-                        <a id="show-wallet-btn" class="navbar-item">
-                            Wallet (simple test simulator)
-                        </a>
-                        <hr class="navbar-divider">
+                        <!--                        <a onclick="fetchJsonAndDisplayInArticleContainerFor('/secure/health')" class="navbar-item">-->
+                        <!--                            Health-->
+                        <!--                        </a>-->
+                        <!--                        <a id="fetch-documents-btn"-->
+                        <!--                           onclick="fetchJsonAndDisplayInArticleContainerFor('/secure/documents')"-->
+                        <!--                           class="navbar-item">-->
+                        <!--                            Documents-->
+                        <!--                        </a>-->
+                        <!--                        <hr class="navbar-divider">-->
+                        <!--                        <a id="show-wallet-btn" class="navbar-item">-->
+                        <!--                            Wallet (simple test simulator)-->
+                        <!--                        </a>-->
                         <a id="fetch-user-btn" onclick="fetchJsonAndDisplayInArticleContainerFor('/secure/user')"
                            class="navbar-item">
                             Current User
@@ -525,9 +532,10 @@ ${JSON.stringify(headers)}`);
                            class="navbar-item">
                             Login status
                         </a>
-                        <a id="show-terminal-btn" class="navbar-item">
-                            Terminal
-                        </a>
+                        <hr class="navbar-divider">
+                        <!--                        <a id="show-terminal-btn" class="navbar-item">-->
+                        <!--                            Terminal-->
+                        <!--                        </a>-->
                         <a id="fetch-dev-json-obj-btn"
                            onclick="fetchJsonAndDisplayInArticleContainerFor('/secure/devjsonobj')"
                            class="navbar-item">

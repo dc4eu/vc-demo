@@ -43,8 +43,8 @@ func engine() *gin.Engine {
 	store.Options(sessions.Options{
 		Path:   "/",
 		MaxAge: 300, // 5 minuter i sekunder - javascript koden tar hänsyn till detta för att försöka gissa om användaren fortsatt är inloggad (om inloggad också vill säga)
-		//Secure:   true,  // Aktivera för produktion för HTTPS
-		//HttpOnly: true,  // Förhindrar JavaScript-åtkomst
+		//Secure:   true,  //TODO: Aktivera för produktion för HTTPS
+		//HttpOnly: true,  //TODO: Förhindrar JavaScript-åtkomst men då behöver webblösingen revideras lite
 	})
 
 	router.Use(sessions.Sessions("vcadminwebsession", store))
@@ -82,13 +82,22 @@ func authRequired(c *gin.Context) {
 		return
 	}
 
-	//TODO: update the cookie with now+5 minutes for timeout samt behöver även sessionen uppdaterad för timeout på något sätt?
+	// Update MaxAge for the session and its cookie - extended time to expire with another 5 minutes from now
+	session.Options(sessions.Options{
+		MaxAge: 300, // 5 minuter
+		Path:   "/",
+	})
+
+	// Save changes in session
+	if err := session.Save(); err != nil {
+		c.JSON(500, gin.H{"error": "Could not save session"})
+		return
+	}
 
 	// Continue down the chain to handler etc
 	c.Next()
 }
 
-// loginHandler is a handler that parses a form and checks for specific data.
 func loginHandler(c *gin.Context) {
 	session := sessions.Default(c)
 
@@ -116,14 +125,13 @@ func loginHandler(c *gin.Context) {
 
 	// TODO: use a userID instead of the username
 	session.Set(userkey, loginBody.Username)
-	if err := session.Save(); err != nil {
+	if err := session.Save(); err != nil { //This is also where the cookie is created
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Successfully authenticated user"})
 }
 
-// logoutHandler is the handler called for the user to log out.
 func logoutHandler(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(userkey)
@@ -131,6 +139,11 @@ func logoutHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid session token"})
 		return
 	}
+
+	// Set cookie to be expired
+	c.SetCookie("vcadminwebsession", "", -1, "/", "", false, true)
+	//TODO: behöver jag göra session save före jag gör session.delete för att cookie updateringen ska gå igenom? OBS! Verkar dock nu bli flera set-Cookie: i requestet med motstridiga värden, utred var och varför....
+
 	session.Delete(userkey)
 	if err := session.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
@@ -139,15 +152,12 @@ func logoutHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Successfully logged out"})
 }
 
-// getUserHandler is the handler that will return the user information stored in the
-// session.
 func getUserHandler(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(userkey)
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
-// getLoginStatusHandler is the handler that will tell the user whether it is logged in or not.
 func getLoginStatusHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "You are logged in"})
 }
