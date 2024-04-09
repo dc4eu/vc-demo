@@ -19,41 +19,8 @@ import (
 
 const userkey = "user"
 
-// 16-byte, 32-, ...
-var secret = []byte("very-secret-code")
-
-func mainOld() {
-	router := gin.Default()
-	//TODO: router.Use(gin.MinifyHTML())
-	//TODO: ??? router.Use(gin.Gzip())
-
-	router.LoadHTMLFiles("./assets/index.html")
-	router.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", nil)
-	})
-
-	router.GET("/health", getHealthHandler())
-	router.GET("/documents", getDocumentHandler())
-	router.GET("/devjsonobj", getDevJsonObjHandler())
-	router.GET("/devjsonarray", getDevJsonArrayHandler())
-
-	//TODO: debug log if no router path match for request
-
-	// Start server
-	//TODO: Inför https (TLS) stöd
-	err := router.Run(":8080") // Lyssnar och serverar på 0.0.0.0:8080 alt localhost:8080 (såvida docker run eller annan container inte definierar något annat)
-	if err != nil {
-		log.Fatal("Error starting server", err)
-	}
-}
-
 func main() {
-	router := engine()
-
-	router.Use(gin.Logger())
-	//TODO: router.Use(gin.MinifyHTML())
-	//TODO: ??? router.Use(gin.Gzip())
-
+	//router := engine()
 	//TODO: Inför https (TLS) stöd
 	if err := engine().Run(":8080"); err != nil {
 		log.Fatal("Unable to start:", err)
@@ -63,8 +30,23 @@ func main() {
 func engine() *gin.Engine {
 	router := gin.New()
 
-	// Setup the cookie store for session management
-	router.Use(sessions.Sessions("vcadminwebsession", cookie.NewStore(secret)))
+	router.Use(gin.Logger())
+	//TODO: router.Use(gin.MinifyHTML())
+	//TODO: ??? router.Use(gin.Gzip())
+
+	// Hemlighet för session cookie store (16-byte, 32-, ...)
+	var secret = []byte("very-secret-code")
+
+	// Konfigurera session cookie store
+	store := cookie.NewStore(secret)
+	store.Options(sessions.Options{
+		Path:   "/",
+		MaxAge: 300, // 5 minuter i sekunder - javascript koden tar hänsyn till detta för att försöka gissa om användaren fortsatt är inloggad (om inloggad också vill säga)
+		//Secure:   true,  // Aktivera för produktion för HTTPS
+		//HttpOnly: true,  // Förhindrar JavaScript-åtkomst
+	})
+
+	router.Use(sessions.Sessions("vcadminwebsession", store))
 
 	router.LoadHTMLFiles("./assets/index.html")
 	router.GET("/", func(c *gin.Context) {
@@ -120,8 +102,6 @@ func login(c *gin.Context) {
 		return
 	}
 
-	// username := c.PostForm("username")
-	// password := c.PostForm("password")
 	username := loginBody.Username
 	password := loginBody.Password
 

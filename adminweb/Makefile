@@ -1,6 +1,6 @@
 docker-build-web1:
 	$(info Docker Building web1 with tag: $(VERSION))
-	docker build --tag docker.sunet.se/dc4eu/web1 .
+	docker build --tag docker.sunet.se/dc4eu/web1:latest .
 
 start:
 	$(info Run!)

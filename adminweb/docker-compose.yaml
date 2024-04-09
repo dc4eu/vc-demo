@@ -78,37 +78,19 @@ services:
     environment:
       - "VC_CONFIG_YAML=config.yaml"
 
-  pdfsigner:
-    container_name: "vc_pdfsigner"
-    image: docker.sunet.se/dc4eu/py_pdfsigner_dev:latest
+  mockas:
+    container_name: vc_mockas
+    image: docker.sunet.se/dc4eu/mockas:demo-v1
     restart: always
     volumes:
       - ./dev_config_docker.yaml:/config.yaml:ro
-      - /var/log/sunet:/var/log/sunet
-    depends_on:
-      - redis
+    ports:
+      - 8080:8080
     networks:
       vc-net:
-        ipv4_address: 172.16.50.7
+        ipv4_address: 172.16.50.13
     environment:
-      - "CONFIG_YAML=config.yaml"
-
-  pdfvalidator:
-    container_name: "vc_pdfvalidator"
-    image: docker.sunet.se/dc4eu/py_pdfvalidator_dev:latest
-    restart: always
-    volumes:
-      - ./dev_config_docker.yaml:/config.yaml:ro
-      - /var/log/sunet:/var/log/sunet
-    # - ./certs/SectigoRSADocumentSigningCA.crt:/app/SectigoRSADocumentSigningCA.crt:ro
-    # - ./certs/USERTrustRSAAddTrustCA.crt:/app/USERTrustRSAAddTrustCA.crt:ro
-    depends_on:
-      - redis
-    networks:
-      vc-net:
-        ipv4_address: 172.16.50.8
-    environment:
-      - "CONFIG_YAML=config.yaml"
+      - "VC_CONFIG_YAML=config.yaml"
 
   web1:
     container_name: "vc_web1"
