@@ -80,7 +80,7 @@ services:
 
   mockas:
     container_name: vc_mockas
-    image: docker.sunet.se/dc4eu/mockas:demo-v1
+    image: docker.sunet.se/dc4eu/mockas:demo-v2
     restart: always
     volumes:
       - ./dev_config_docker.yaml:/config.yaml:ro
