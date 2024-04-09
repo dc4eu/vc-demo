@@ -9,4 +9,5 @@ stop:
 restart: stop start
 
 clean: stop
-	docker volume rm datastore_mongo_data_demo
+	docker volume rm datastore_redis_data
+	docker volume rm datastore_mongo_data

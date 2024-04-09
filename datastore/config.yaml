@@ -20,15 +20,43 @@ common:
         name: validate
       ladok_persistent_save:
         name: persistent_save
+  key_value:
+    db: 3
+    addr: redis:6379
+    password: test-password
+  qr:
+    base_url: "https://deutsche-rentenversicherung.de"
+    recovery_level: 2
+    size: 256
 
+apigw:
+  api_server:
+    addr: :8080
+
+cache:
+  api_server:
+    addr: :8080
+
+persistent:
+  api_server:
+    addr: :8080
   
 datastore:
   api_server:
     addr: :8080
   rpc_server: 
     addr: datastore:8090
+
+registry:
+  api_server:
+    addr: :8080
+  smt:
+    update_periodicity: 5
+    init_leaf: 575cea4a-5725-11ee-8287-2b486b7ace28
+  rpc_server:
+    addr: registry:8090
   
 mock_as:
   api_server:
     addr: :8080
-  datastore_url: http://vc_datastore:8080
+  datastore_url: http://vc_demo_apigw:8080
