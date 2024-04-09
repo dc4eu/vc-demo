@@ -17,13 +17,16 @@ import (
 //TODO: inför rate-limit
 //TODO: ...
 
+// Secret for session cookie store (16-byte, 32-, ...)
+var sessionStoreSecret = []byte("very-secret-code")
+
 const userkey = "user"
 
 func main() {
-	//router := engine()
 	//TODO: Inför https (TLS) stöd
 	if err := engine().Run(":8080"); err != nil {
-		log.Fatal("Unable to start:", err)
+		log.Fatal("Unable to start gin engine:", err)
+		panic(err)
 	}
 }
 
@@ -34,11 +37,9 @@ func engine() *gin.Engine {
 	//TODO: router.Use(gin.MinifyHTML())
 	//TODO: ??? router.Use(gin.Gzip())
 
-	// Hemlighet för session cookie store (16-byte, 32-, ...)
-	var secret = []byte("very-secret-code")
-
 	// Konfigurera session cookie store
-	store := cookie.NewStore(secret)
+	store := cookie.NewStore(sessionStoreSecret)
+	//TODO: Se över sessionen och timeout, är det nedan som avses även för sessionen, dvs behöver den uppdateras vid varje authRequired precis som cookiens timeout?
 	store.Options(sessions.Options{
 		Path:   "/",
 		MaxAge: 300, // 5 minuter i sekunder - javascript koden tar hänsyn till detta för att försöka gissa om användaren fortsatt är inloggad (om inloggad också vill säga)
@@ -53,27 +54,26 @@ func engine() *gin.Engine {
 		c.HTML(http.StatusOK, "index.html", nil)
 	})
 
-	// Login and logout routes
-	router.POST("/login", login)
-	router.GET("/logout", logout)
+	// Login route
+	router.POST("/login", loginHandler)
 
-	router.GET("/health", getHealthHandler())
-	router.GET("/documents", getDocumentHandler())
-	router.GET("/devjsonobj", getDevJsonObjHandler())
-	router.GET("/devjsonarray", getDevJsonArrayHandler())
-
-	// Private group, require authentication to access
-	private := router.Group("/private")
-	private.Use(AuthRequired)
+	// Secure route group, require authentication to access
+	secureRouter := router.Group("/secure")
+	secureRouter.Use(authRequired)
 	{
-		private.GET("/me", me)
-		private.GET("/status", status)
+		secureRouter.GET("/logout", logoutHandler)
+		secureRouter.GET("/health", getHealthHandler())
+		secureRouter.GET("/documents", getDocumentHandler())
+		secureRouter.GET("/devjsonobj", getDevJsonObjHandler())
+		secureRouter.GET("/devjsonarray", getDevJsonArrayHandler())
+		secureRouter.GET("/user", getUserHandler)
+		secureRouter.GET("/loginstatus", getLoginStatusHandler)
 	}
+
 	return router
 }
 
-// AuthRequired is a simple middleware to check the session.
-func AuthRequired(c *gin.Context) {
+func authRequired(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(userkey)
 	if user == nil {
@@ -81,12 +81,15 @@ func AuthRequired(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
+
+	//TODO: update the cookie with now+5 minutes for timeout samt behöver även sessionen uppdaterad för timeout på något sätt?
+
 	// Continue down the chain to handler etc
 	c.Next()
 }
 
-// login is a handler that parses a form and checks for specific data.
-func login(c *gin.Context) {
+// loginHandler is a handler that parses a form and checks for specific data.
+func loginHandler(c *gin.Context) {
 	session := sessions.Default(c)
 
 	type LoginBody struct {
@@ -95,31 +98,24 @@ func login(c *gin.Context) {
 	}
 
 	var loginBody LoginBody
-
-	// Försök deserialisera förfrågans body till LoginBody-strukturen
 	if err := c.BindJSON(&loginBody); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	username := loginBody.Username
-	password := loginBody.Password
-
-	// Validate form input
-	if strings.Trim(username, " ") == "" || strings.Trim(password, " ") == "" {
+	if strings.Trim(loginBody.Username, " ") == "" || strings.Trim(loginBody.Password, " ") == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Parameters can't be empty"})
 		return
 	}
 
-	// Check for username and password match, usually from a database
-	//TODO: ta in godkända username och password från config fil
-	if username != "admin" || password != "secret123" {
+	//TODO: load valid username(s) och password(s) från config fil (or db)
+	if loginBody.Username != "admin" || loginBody.Password != "secret123" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication failed"})
 		return
 	}
 
-	// Save the username in the session
-	session.Set(userkey, username) // In real world usage you'd set this to the users ID
+	// TODO: use a userID instead of the username
+	session.Set(userkey, loginBody.Username)
 	if err := session.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
 		return
@@ -127,8 +123,8 @@ func login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Successfully authenticated user"})
 }
 
-// logout is the handler called for the user to log out.
-func logout(c *gin.Context) {
+// logoutHandler is the handler called for the user to log out.
+func logoutHandler(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(userkey)
 	if user == nil {
@@ -143,16 +139,16 @@ func logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Successfully logged out"})
 }
 
-// me is the handler that will return the user information stored in the
+// getUserHandler is the handler that will return the user information stored in the
 // session.
-func me(c *gin.Context) {
+func getUserHandler(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(userkey)
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
-// status is the handler that will tell the user whether it is logged in or not.
-func status(c *gin.Context) {
+// getLoginStatusHandler is the handler that will tell the user whether it is logged in or not.
+func getLoginStatusHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "You are logged in"})
 }
 
