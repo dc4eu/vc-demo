@@ -30,7 +30,7 @@ cleans docker volumes etc..
 Produce mock data to datastore
 
 ### Upload one document
-This call will send a complete mock version of a document to the datastore, the datastore will then save it in mongoDB.
+This call will send a complete mock version of a document to the datastore, the datastore will then save it in mongoDB. Return complete payload for inspection.
 
 ```bash
 curl --request POST \
@@ -57,7 +57,7 @@ curl --request POST \
 
 ## APIGW
 ### /api/v1/id/mapping
-Map known attributes to document in datastore. Attributes needs to be change to match previous reply from mockas
+Map known attributes to document in datastore. Attributes needs to be change to match previous reply from `mockas`
 
 ```bash
 curl --request POST \
