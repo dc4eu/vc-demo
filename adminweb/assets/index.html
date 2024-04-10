@@ -83,7 +83,7 @@
         };
     }
 
-    //TODO: Inför kontroll om att användaren med största sannolikhet är inloggad, om ej skicka till login med något meddelande med nedan koncept
+    //TODO: Inför kontroll om att användaren med största sannolikhet är inloggad, om ej skicka till login med något meddelande om det
 
     function isLoggedIn() {
         const cookie = document.cookie
@@ -205,6 +205,7 @@ ${JSON.stringify(headers)}`);
             errorPreElement.style.color = "red";
             updateTextContentInChildPreTagFor(elements.errorDiv, err.name + " " + err.message);
             updateTextContentInChildPreTagFor(elements.debugDiv, "");
+            //TODO: JonL: hur kan ja få ut ev. respMeta och ev. payload här men så det ändå hanterar alla möjliga konstiga fel från servern?
             updateTextContentInChildPreTagFor(elements.respMetaDiv, "");
             updateTextContentInChildPreTagFor(elements.payloadDiv, "");
         }
@@ -289,7 +290,7 @@ ${JSON.stringify(headers)}`);
         const password = passwordInput.value;
         passwordInput.disabled = true;
 
-        console.debug("Login try with: ", username, password);
+        //console.debug("Login try with: ", username, password);
 
         const postBody = {
             username: username,
@@ -299,6 +300,7 @@ ${JSON.stringify(headers)}`);
         let request = {
             method: 'POST',
             headers: {
+                'Accept': 'application/json',
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(postBody),

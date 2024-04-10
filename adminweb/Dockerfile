@@ -56,7 +56,6 @@ CMD ["./vc_web1"]
 # curl --request POST   --url http://172.16.50.13:8080/api/v1/mock/next   --header 'Content-Type: application/json'   --header 'User-Agent: insomnia/2023.5.8'   --data '{
 #        "document_type": "PDA1",
 #        "authentic_source": "SUNET"
-#
-#}' | jq .
+# }' | jq .
 #
 # Note: "| jq ." pipes out formatted json 
