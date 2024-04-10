@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
@@ -10,28 +11,31 @@ import (
 	"io"
 	"log"
 	"net/http"
-	//Backup of some imports since they sometimes is removed by the IDE
-	// "bytes"
-	// "encoding/json"
-	// "io"
-	// "log"
-	// "net/http"
-	// "path"
-	// "github.com/gin-contrib/sessions"
-	// "github.com/gin-contrib/sessions/cookie"
-	// "github.com/gin-gonic/gin"
-	// "github.com/google/uuid"
+	"strings"
+	//Backup of some imports since the IDE sometimes removes them to fast
+	//"bytes"
+	//"encoding/json"
+	//"github.com/gin-contrib/gzip"
+	//"github.com/gin-contrib/sessions"
+	//"github.com/gin-contrib/sessions/cookie"
+	//"github.com/gin-gonic/gin"
+	//"github.com/google/uuid"
+	//"io"
+	//"log"
+	//"net/http"
+	//"strings"
 )
 
-//TODO: Inför någon enkel form av auth (login/logout inkl timeout) tills ev. en mer avancerad införs...(ex JWT)
 //TODO: Inför vettigare loggning (och ta bort log.Print...)
 //TODO: inför timeout vid anrop
 //TODO: inför rate-limit
 //TODO: ...
 
-const apigwBaseUrl = "http://172.16.50.2:8080"
-const apigwAPIBaseUrl = apigwBaseUrl + "/api/v1"
-const userkey = "user"
+const (
+	apigwBaseUrl    = "http://172.16.50.2:8080"
+	apigwAPIBaseUrl = apigwBaseUrl + "/api/v1"
+	sessionUserKey  = "user"
+)
 
 /* Secret for session cookie store (16-byte, 32-, ...) */
 //TODO: ta in från konfiguration
@@ -42,7 +46,7 @@ func main() {
 
 	router.Use(gin.Logger())
 	//TODO: router.Use(gin.MinifyHTML())
-	//TODO: ??? router.Use(gin.Gzip())
+	router.Use(gzip.Gzip(gzip.DefaultCompression))
 	router.Use(setupSessionMiddleware(sessionStoreSecret, 300, "/"))
 
 	// Static route
@@ -58,7 +62,7 @@ func main() {
 	secureRouter := router.Group("/secure")
 	secureRouter.Use(authRequired)
 	{
-		secureRouter.GET("/logout", logoutHandler)
+		secureRouter.DELETE("/logout", logoutHandler)
 		secureRouter.GET("/health", getHealthHandler())
 		secureRouter.GET("/document/:document_id", getDocumentByIdHandler())
 		secureRouter.GET("/devjsonobj", getDevJsonObjHandler())
@@ -85,34 +89,40 @@ func configureSessionStore(secret []byte, maxAge int, path string) sessions.Stor
 		Path:   path,
 		MaxAge: maxAge, // 5 minuter i sekunder - javascript koden tar hänsyn till detta för att försöka gissa om användaren fortsatt är inloggad (om inloggad också vill säga)
 		//Secure:   true,  //TODO: Aktivera för produktion för HTTPS
-		//HttpOnly: true,  //TODO: Förhindrar JavaScript-åtkomst men då behöver webblösingen revideras lite
+		HttpOnly: true,
 	})
 	return store
 }
 
 func authRequired(c *gin.Context) {
 	session := sessions.Default(c)
-	user := session.Get(userkey)
+	user := session.Get(sessionUserKey)
 	if user == nil {
 		// Abort the request with the appropriate error code
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized/session expired"})
 		return
 	}
 
-	// Update MaxAge for the session and its cookie - extended time to expire with another 5 minutes from now
-	session.Options(sessions.Options{
-		MaxAge: 300, // 5 minuter
-		Path:   "/",
-	})
+	if !isLogoutRoute(c) { // Don't touch the session (including cookie) during logout
+		// Update MaxAge for the session and its cookie - extended time to expire with another 5 minutes from now
+		session.Options(sessions.Options{
+			MaxAge: 300, // 5 minuter
+			Path:   "/",
+		})
 
-	// Save changes in session
-	if err := session.Save(); err != nil {
-		c.JSON(500, gin.H{"error": "Could not save session"})
-		return
+		if err := session.Save(); err != nil {
+			c.JSON(500, gin.H{"error": "Could not save session"})
+			return
+		}
 	}
 
-	// Continue down the chain to handler etc
 	c.Next()
+}
+
+func isLogoutRoute(c *gin.Context) bool {
+	path := c.Request.URL.Path
+	method := c.Request.Method
+	return strings.HasSuffix(path, "/logout") && method == "DELETE"
 }
 
 func loginHandler(c *gin.Context) {
@@ -129,11 +139,6 @@ func loginHandler(c *gin.Context) {
 		return
 	}
 
-	// if strings.Trim(loginBody.Username, " ") == "" || strings.Trim(loginBody.Password, " ") == "" {
-	// 	c.JSON(http.StatusBadRequest, gin.H{"error": "Parameters can't be empty"})
-	// 	return
-	// }
-
 	//TODO: load valid username(s) och password(s) från config fil (or db)
 	if loginBody.Username != "admin" || loginBody.Password != "secret123" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication failed"})
@@ -141,7 +146,7 @@ func loginHandler(c *gin.Context) {
 	}
 
 	// TODO: use a userID instead of the username
-	session.Set(userkey, loginBody.Username)
+	session.Set(sessionUserKey, loginBody.Username)
 	if err := session.Save(); err != nil { //This is also where the cookie is created
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
 		return
@@ -151,27 +156,29 @@ func loginHandler(c *gin.Context) {
 
 func logoutHandler(c *gin.Context) {
 	session := sessions.Default(c)
-	user := session.Get(userkey)
+	user := session.Get(sessionUserKey)
 	if user == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid session token"})
 		return
 	}
 
-	// Set cookie to be expired
-	c.SetCookie("vcadminwebsession", "", -1, "/", "", false, true)
-	//TODO: behöver jag göra session save före jag gör session.delete för att cookie updateringen ska gå igenom? OBS! Verkar dock nu bli flera set-Cookie: i requestet med motstridiga värden, utred var och varför....
-
-	session.Delete(userkey)
+	// Delete the session and cookie
+	session.Delete(sessionUserKey)
+	session.Options(sessions.Options{
+		MaxAge: -1, // Expired
+		Path:   "/",
+	})
 	if err := session.Save(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove session (and cookie)"})
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Successfully logged out"})
 }
 
 func getUserHandler(c *gin.Context) {
 	session := sessions.Default(c)
-	user := session.Get(userkey)
+	user := session.Get(sessionUserKey)
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
@@ -261,7 +268,7 @@ func getDocumentByIdHandler() func(c *gin.Context) {
 			return
 		}
 
-		// Create new HTTP POST reguest whti jsonData as body
+		// Create new HTTP POST reguest with jsonData as body
 		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 		if err != nil {
 			//log.Printf("Error while preparing request to url: %s %s", url, err.Error())

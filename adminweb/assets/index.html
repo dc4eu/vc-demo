@@ -62,16 +62,13 @@
         hideAElement("show-login-form-btn")
     }
 
-    //const { randomUUID } = require('uuid-random');
     let currentIdNumber = 0;
     const secureGenerateUUID = () => {
-        //TODO: fix in Dockerfile and docker-compose.yaml: return randomUUID();
+        //TODO: JonL: hur kan jag få till UUID:er, medför "Uncaught TypeError: crypto.randomUUID is not a function"
+        //return crypto.randomUUID();
         return currentIdNumber++;
     };
 
-    // const secureGenerateUUID = () => {
-    //     return crypto.randomUUID();
-    // }
 
     const generateArticleIDBasis = () => {
         const uuid = secureGenerateUUID();
@@ -424,17 +421,16 @@ ${JSON.stringify(headers)}`);
             'Content-Type': 'application/json'
         };
 
-        //TODO: gör om till en delete (dvs inte get)
         const request = new Request(url, {
-            method: "GET",
+            method: "DELETE",
             headers: headers
         });
 
         // Skriv ut request headers för demonstration
-        console.debug(`Request method: ${request.method}`);
-        for (const [key, value] of request.headers.entries()) {
-            console.debug(`Request header ${key}: ${value}`);
-        }
+        // console.debug(`Request method: ${request.method}`);
+        // for (const [key, value] of request.headers.entries()) {
+        //     console.debug(`Request header ${key}: ${value}`);
+        // }
 
         //TODO: inför felhantering
         await fetch(request);

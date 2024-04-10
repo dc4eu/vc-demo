@@ -85,7 +85,7 @@ services:
     volumes:
       - ./dev_config_docker.yaml:/config.yaml:ro
     ports:
-      - 8080:8080
+      - "8080:8080"
     networks:
       vc-net:
         ipv4_address: 172.16.50.13
