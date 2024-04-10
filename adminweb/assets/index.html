@@ -450,7 +450,9 @@ ${JSON.stringify(headers)}`);
     window.addEventListener('load', function () {
         // Hides all secure menu iterm when page is loaded (including css, images, etc)
         // Comment out the line below to display secure meny items on page load regardless of auth or not
-        if (!isLoggedIn()) {
+        if (isLoggedIn()) {
+            displaySecureMenyItems();
+        } else {
             hideSecureMenyItems();
         }
     });
