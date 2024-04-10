@@ -1,15 +1,15 @@
 # Datastore demo
 ## Mongo config
-database: ```datastore```
+database: ```vc```
 
-collection: ```generic```
+collection: ```datastore```
 
 indexs: ```document_id: 1```
 
 ### Query
-```use datastore```
+```use vc```
 
-```db.generic.find({"meta.document_id": "<uuid>"}).pretty()```
+```db.datastore.find({"meta.document_id": "<uuid>"}).pretty()```
 
 ## Demo environment
 ### Run
