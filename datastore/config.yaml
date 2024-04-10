@@ -10,16 +10,22 @@ common:
     type: jaeger
   queues:
     simple_queue:
-      ladok_sign:
-        name: sign
-      ladok_add_signed:
-        name: add_signed
-      ladok_del_signed:
-        name: del_signed
-      ladok_validate:
-        name: validate
-      ladok_persistent_save:
-        name: persistent_save
+      eduseal_sign:
+        name: eduseal_sign
+      eduseal_add_signed:
+        name: eduseal_add_signed
+      eduseal_del_signed:
+        name: eduseal_del_signed
+      eduseal_validate:
+        name: eduseal_validate
+      eduseal_persistent_save:
+        name: eduseal_persistent_save
+      vc_persistent_save:
+        name: vc_persistent_save
+      vc_persistent_get:
+        name: vc_persistent_get
+      vc_persistent_delete:
+        name: vc_persistent_delete
   key_value:
     db: 3
     addr: redis:6379
