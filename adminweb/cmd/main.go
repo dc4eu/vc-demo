@@ -108,6 +108,8 @@ func authRequired(c *gin.Context) {
 		session.Options(sessions.Options{
 			MaxAge: 300, // 5 minuter
 			Path:   "/",
+			//Secure:   true,  //TODO: Aktivera för produktion för HTTPS
+			HttpOnly: true,
 		})
 
 		if err := session.Save(); err != nil {
@@ -167,6 +169,8 @@ func logoutHandler(c *gin.Context) {
 	session.Options(sessions.Options{
 		MaxAge: -1, // Expired
 		Path:   "/",
+		//Secure:   true,  //TODO: Aktivera för produktion för HTTPS
+		HttpOnly: true,
 	})
 	if err := session.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove session (and cookie)"})
