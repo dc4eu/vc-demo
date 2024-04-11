@@ -96,11 +96,15 @@ services:
     container_name: "vc_web1"
     image: docker.sunet.se/dc4eu/web1:latest
     restart: always
+    volumes:
+      - ./config.yaml:/config.yaml:ro
     depends_on:
       - apigw
     networks:
       vc-net:
         ipv4_address: 172.16.50.12
+    environment:
+      - "VC_CONFIG_YAML=config.yaml"
 
   redis:
     image: redis:alpine

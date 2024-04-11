@@ -309,9 +309,8 @@ ${JSON.stringify(headers)}`);
             const response = await fetch(url, request);
 
             if (!response.ok) {
-                // Skapa ett detaljerat felmeddelande
-                throw new Error(`HTTP error! status: ${response.status}, method: ${request.method}, url: ${url}, headers:
-${JSON.stringify(headers)}`);
+                //TODO: bättre felmeddelande
+                throw new Error(`HTTP error! status: ${response.status}, method: ${request.method}, url: ${url}, headers: ${JSON.stringify(response.headers)}`);
             }
 
             // Loggar metadata för response
