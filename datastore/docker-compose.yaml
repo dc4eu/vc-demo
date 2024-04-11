@@ -2,58 +2,144 @@
 version: "3"
 
 services:
-  datastore:
-    container_name: "vc_datastore"
-    image: docker.sunet.se/dc4eu/datastore:demo-v1
+  apigw:
+    container_name: "vc_demo_apigw"
+    image: docker.sunet.se/dc4eu/apigw:demo-v2
     restart: always
     volumes:
       - ./config.yaml:/config.yaml:ro
-      #links:
-      #- haproxy
     depends_on:
+      - redis
       - mongo
-    #  - haproxy
     networks:
-      - vc-net
+      vc-net:
+        ipv4_address: 172.16.80.2
+    environment:
+      - "VC_CONFIG_YAML=config.yaml"
+
+  verifier:
+    container_name: "vc_demo_verifier"
+    image: docker.sunet.se/dc4eu/verifier:demo-v2
+    restart: always
+    volumes:
+      - ./config.yaml:/config.yaml:ro
+    depends_on:
+      - redis
+      - mongo
+    networks:
+      vc-net:
+        ipv4_address: 172.16.80.3
+    environment:
+      - "VC_CONFIG_YAML=config.yaml"
+
+  registry:
+    container_name: "vc_demo_registry"
+    image: docker.sunet.se/dc4eu/registry:demo-v2
+    restart: always
+    volumes:
+      - ./config.yaml:/config.yaml:ro
+    depends_on:
+      - redis
+      - mongo
+    networks:
+      vc-net:
+        ipv4_address: 172.16.80.4
+    environment:
+      - "VC_CONFIG_YAML=config.yaml"
+
+  cache:
+    container_name: "vc_demo_cache"
+    image: docker.sunet.se/dc4eu/cache:demo-v2
+    restart: always
+    volumes:
+      - ./config.yaml:/config.yaml:ro
+    depends_on:
+      - redis
+    networks:
+      vc-net:
+        ipv4_address: 172.16.80.5
+    environment:
+      - "VC_CONFIG_YAML=config.yaml"
+
+  persistent:
+    container_name: "vc_demo_persistent"
+    image: docker.sunet.se/dc4eu/persistent:demo-v2
+    restart: always
+    volumes:
+      - ./config.yaml:/config.yaml:ro
+    depends_on:
+      - redis
+      - mongo
+    networks:
+      vc-net:
+        ipv4_address: 172.16.80.6
     environment:
       - "VC_CONFIG_YAML=config.yaml"
 
   mockas:
-    container_name: vc_mockas
-    image: docker.sunet.se/dc4eu/mockas:demo-v1
+    container_name: vc_demo_mockas
+    image: docker.sunet.se/dc4eu/mockas:demo-v2
     restart: always
     volumes:
       - ./config.yaml:/config.yaml:ro
+    depends_on:
+      - apigw
     ports:
       - 8080:8080
     networks:
       vc-net:
-        ipv4_address: 172.16.70.100
+        ipv4_address: 172.16.80.7
     environment:
       - "VC_CONFIG_YAML=config.yaml"
 
+  redis:
+    image: redis:alpine
+    container_name: "vc_demo_redis"
+    restart: always
+    expose:
+      - 6373
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      vc-net:
+        ipv4_address: 172.16.80.9
+
   mongo:
     image: mongo:4.0.10
-    container_name: "vc_mongo"
+    container_name: "vc_demo_mongo"
     restart: always
     expose:
       - 27017
     volumes:
-      - mongo_data_demo:/data
+      - mongo_data:/data
     networks:
-      - vc-net
+      vc-net:
+        ipv4_address: 172.16.80.10
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: vc_demo_jaeger
+    restart: always
+    expose:
+      - 16686
+      - 4317
+      - 4318
+    networks:
+      vc-net:
+        ipv4_address: 172.16.80.11
+    environment:
+      - "COLLECTOR_OTLP_ENABLED=true"
 
 networks:
   vc-net:
     driver: bridge
     driver_opts:
-      com.docker.network.bridge.name: br-vc-ds-demo
+      com.docker.network.bridge.name: br-vc-demo
     ipam:
       driver: default
       config:
-        - subnet: 172.16.70.0/24
-
+        - subnet: 172.16.80.0/24
 volumes:
-  mongo_data_demo:
-
-
+  redis_data:
+  mongo_data:
