@@ -31,6 +31,7 @@
     const clearAllContentContainers = () => {
         clearContainer("login-container");
         clearContainer("article-container");
+        clearSearchDocumentForm();
     }
 
     function displayAElement(id) {
@@ -69,6 +70,14 @@
         return currentIdNumber++;
     };
 
+    const toogleThemeDarkLight = () => {
+        const htmlElement = document.documentElement;
+        if (htmlElement.className === "theme-light") {
+            htmlElement.className = "theme-dark";
+        } else {
+            htmlElement.className = "theme-light";
+        }
+    }
 
     const generateArticleIDBasis = () => {
         const uuid = secureGenerateUUID();
@@ -181,6 +190,13 @@ ${url} , headers: ${JSON.stringify(headers)}`)
             const response = await fetch(request);
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    // Not auth/session expired
+                    clearAllContentContainers();
+                    hideSecureMenyItems();
+                    return;
+                }
+
                 // Skapa ett detaljerat felmeddelande
                 throw new Error(`HTTP error! status: ${response.status}, method: ${request.method}, url: ${url}, headers:
 ${JSON.stringify(headers)}`);
@@ -212,16 +228,28 @@ ${JSON.stringify(headers)}`);
         return element && element.value && element.value.trim() !== "" && element.value.trim() !== " ";
     }
 
+    function clearSearchDocumentForm(docTypeSelect) {
+        getElementById("document-id-input").value = "";
+        getElementById('doc-type-select').selectedIndex = 0;
+        updateFetchDocumentByIdButton();
+    }
+
     const fetchDocumentById = () => {
+        console.debug("fetchDocumentById");
         const documentIdInput = getElementById("document-id-input");
         if (validateHasValueAndNotEmpty(documentIdInput)) {
             const documentId = documentIdInput.value.trim();
-            console.log("fetchDocumentById: " + documentId);
+            console.debug("documentId: " + documentId);
 
-            // Reset search field to enable another search
-            documentIdInput.value = "";
-            updateFetchDocumentByIdButton();
+            const docTypeSelect = getElementById('doc-type-select');
+            const docType = docTypeSelect.value;
+            console.debug("docType: " + docType)
+            //TODO: skicka med docType i requestet (bodyn vid post)
 
+            // Reset search fields to enable another search
+            clearSearchDocumentForm();
+
+            //TODO: gör om till en POST istället då det kommer variera vad vi vill söka på (samt säkrare)
             fetchJsonAndDisplayInArticleContainerFor(`/secure/document/${documentId}`)
         }
     }
@@ -522,6 +550,10 @@ ${JSON.stringify(headers)}`);
                         <!--                        <a id="show-wallet-btn" class="navbar-item">-->
                         <!--                            Wallet (simple test simulator)-->
                         <!--                        </a>-->
+                        <a id="toggle-theme-btn" onclick="toogleThemeDarkLight()"
+                           class="navbar-item">
+                            Toogle theme (dark/light)
+                        </a>
                         <a id="fetch-user-btn" onclick="fetchJsonAndDisplayInArticleContainerFor('/secure/user')"
                            class="navbar-item">
                             Current User
@@ -547,12 +579,19 @@ ${JSON.stringify(headers)}`);
                         </a>
                     </div>
                 </div>
-                <div id="navbar-dropdown-1-div" class="navbar-item field has-addons">
+
+                <div id="navbar-search-doc-div" class="navbar-item field has-addons">
                     <div class="control">
                         <!-- TODO: se över onkeyup efter updateFetchDocumentByIdButton(); och flytta ev. logiken till en func eller liknande, kanske i samma ?-->
                         <input id="document-id-input"
                                onkeyup="updateFetchDocumentByIdButton(); if (event.key === 'Enter') { document.getElementById('fetch-document-by-id-btn').click()}"
                                class="input" type="text" placeholder="Fetch document by id">
+                    </div>
+                    <div class="select">
+                        <select id="doc-type-select">
+                            <option value="EHIC">EHIC</option>
+                            <option value="PDA1">PDA1</option>
+                        </select>
                     </div>
                     <div class="control">
                         <button id="fetch-document-by-id-btn" onclick="fetchDocumentById()" class="button" disabled>
