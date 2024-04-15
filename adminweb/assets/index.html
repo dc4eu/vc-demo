@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css">
-    <!--TODO: save css locally -->
+    <!--TODO: save css in assets -->
     <!--TODO: add favico -->
-    <title>VC admin web</title>
+    <title>VC demo web</title>
 </head>
 
 <script>
@@ -43,7 +43,7 @@
     }
 
     function displayDiv(id) {
-        getElementById(id).style.display = 'block';
+        getElementById(id).style.display = 'flex';//'block';
     }
 
     function hideDiv(id) {
@@ -57,7 +57,6 @@
     }
 
     function displaySecureMenyItems() {
-        <!-- TODO: JonL: hur få till så att navbar-start-div ritas ut med rätt bredd, nu hamnar alla items under varandra oavsett fönsterbredd -->
         displayDiv('navbar-start-div')
         displayAElement("do-logout-btn")
         hideAElement("show-login-form-btn")
@@ -133,11 +132,11 @@
             reqMetaDiv: buildDiv('Request meta', 'req-meta'),
             errorDiv: buildDiv('Error', 'error'),
             respMetaDiv: buildDiv('Respons meta', 'resp-meta'),
-            debugDiv: buildDiv('Debug', 'debug-meta'),
+            //debugDiv: buildDiv('Debug', 'debug-meta'),
             payloadDiv: buildDiv('Payload', 'payload'),
         };
 
-        const articleDiv = buildArticle(articleID, articleHeaderText, [bodyChildren.reqMetaDiv, bodyChildren.debugDiv,
+        const articleDiv = buildArticle(articleID, articleHeaderText, [bodyChildren.reqMetaDiv, //bodyChildren.debugDiv,
             bodyChildren.errorDiv, bodyChildren.respMetaDiv, bodyChildren.payloadDiv]);
         const articleContainer = getElementById('article-container');
         articleContainer.prepend(articleDiv);
@@ -188,6 +187,7 @@ ${url} , headers: ${JSON.stringify(headers)}`)
         try {
             //TODO: add timeout on clientside for fetch?
             const response = await fetch(request);
+            const jsonBody = await response.json();
 
             if (!response.ok) {
                 if (response.status === 401) {
@@ -197,28 +197,30 @@ ${url} , headers: ${JSON.stringify(headers)}`)
                     return;
                 }
 
+                //const jsonBody = await response.json();
+
+
                 // Skapa ett detaljerat felmeddelande
                 throw new Error(`HTTP error! status: ${response.status}, method: ${request.method}, url: ${url}, headers:
-${JSON.stringify(headers)}`);
+${JSON.stringify(headers)}, body: ${JSON.stringify(jsonBody)}`);
             }
 
             const responseMetaData = buildResponseMeta(response);
             updateTextContentInChildPreTagFor(elements.respMetaDiv, responseMetaData);
 
-            const jsonPromise = await response.json();
-            console.debug(jsonPromise);
+
+            console.debug(jsonBody);
 
             updateTextContentInChildPreTagFor(elements.errorDiv, "");
-            updateTextContentInChildPreTagFor(elements.debugDiv, "");
-            updateTextContentInChildPreTagFor(elements.payloadDiv, JSON.stringify(jsonPromise, null, 2));
+            //updateTextContentInChildPreTagFor(elements.debugDiv, "");
+            updateTextContentInChildPreTagFor(elements.payloadDiv, JSON.stringify(jsonBody, null, 2));
         } catch (err) {
             console.error("Error fetching data: ", err.message);
 
             const errorPreElement = elements.errorDiv.querySelector("pre");
             errorPreElement.style.color = "red";
             updateTextContentInChildPreTagFor(elements.errorDiv, err.name + " " + err.message);
-            updateTextContentInChildPreTagFor(elements.debugDiv, "");
-            //TODO: JonL: hur kan ja få ut ev. respMeta och ev. payload här men så det ändå hanterar alla möjliga konstiga fel från servern?
+            //updateTextContentInChildPreTagFor(elements.debugDiv, "");
             updateTextContentInChildPreTagFor(elements.respMetaDiv, "");
             updateTextContentInChildPreTagFor(elements.payloadDiv, "");
         }
@@ -494,14 +496,13 @@ ${JSON.stringify(headers)}`);
 
 <div class="box">
 
-    <!--    <h4 class="title is-4">VC admin web</h4>-->
 
     <nav id="nav-nav" class="navbar" role="navigation" aria-label="main navigation">
 
         <!-- -->
         <!-- TODO: add navbar-logo -->
         <div id="navbar-brand-div" class="navbar-brand">
-            <p class="navbar-item is-info"><b>VC admin web</b></p>
+            <p class="navbar-item is-info"><b>VC demo web</b></p>
             <!--        <a class="navbar-item" href="https://bulma.io">-->
             <!--            <svg width="640" height="160" viewBox="0 0 640 160" fill="none" xmlns="http://www.w3.org/2000/svg">-->
             <!--                <path fill-rule="evenodd" clip-rule="evenodd"-->

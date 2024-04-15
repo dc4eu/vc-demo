@@ -67,6 +67,8 @@ func main() {
 		c.HTML(http.StatusOK, "index.html", nil)
 	})
 
+	httpClient := http.Client{}
+
 	// Login route
 	router.POST("/login", loginHandler(cfg))
 
@@ -74,6 +76,8 @@ func main() {
 	secureRouter := router.Group("/secure")
 	secureRouter.Use(authRequired)
 	{
+		secureRouter.POST("/mockas", postMockHandler(cfg, &httpClient))
+		secureRouter.POST("/portal", getPortalHandler(cfg, &httpClient))
 		secureRouter.DELETE("/logout", logoutHandler)
 		secureRouter.GET("/health", getHealthHandler)
 		secureRouter.GET("/document/:document_id", getDocumentByIdHandler)
@@ -86,6 +90,78 @@ func main() {
 	//TODO: Inför https (TLS) stöd
 	if err := router.Run(":8080"); err != nil {
 		log.Fatal("Unable to start gin engine:", err)
+	}
+}
+
+func postMockHandler(cfg *model.Cfg, client *http.Client) gin.HandlerFunc {
+	//closure
+	return func(c *gin.Context) {
+		url := apigwAPIBaseUrl + "/mock/next"
+		doPostForDemoFlows(c, url, client)
+	}
+}
+
+func doPostForDemoFlows(c *gin.Context, url string, client *http.Client) {
+	//{
+	//	document_type: <från dropdown>
+	//	authentic_source: "SUNET", ta även in denna från GUI (sätt som statisk)
+	//	authentic_source_person_id: <fritextfält i GUI>
+	//}
+
+	type Body struct {
+		DocumentType            string `json:"document_type" binding:"required"`
+		AuthenticSource         string `json:"authentic_source" binding:"required"`
+		AuthenticSourcePersonId string `json:"authentic_source_person_id" binding:"required"`
+	}
+
+	var reqBody Body
+
+	if err := c.ShouldBindJSON(reqBody); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	reqBodyJSON, err := json.Marshal(reqBody)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error marshalling body"})
+		return
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBodyJSON))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error creating new http req": err.Error()})
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error req": err.Error()})
+		return
+	}
+
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error read resp": err.Error()})
+		return
+	}
+
+	var jsonResp map[string]interface{}
+	if err := json.Unmarshal(body, &jsonResp); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error Unmarshal resp Body": err.Error()})
+		return
+	}
+
+	c.JSON(resp.StatusCode, jsonResp)
+}
+
+func getPortalHandler(cfg *model.Cfg, client *http.Client) gin.HandlerFunc {
+	//closure
+	return func(c *gin.Context) {
+		url := apigwAPIBaseUrl + "/portal"
+		doPostForDemoFlows(c, url, client)
 	}
 }
 
@@ -239,7 +315,7 @@ func getHealthHandler(c *gin.Context) {
 		return
 	}
 
-	//log.Print("Response body:", string(data))
+	//log.Print("Response Body:", string(data))
 
 	c.Data(resp.StatusCode, "application/json", data)
 	//}
@@ -300,7 +376,7 @@ func getDocumentByIdHandler(c *gin.Context) {
 		return
 	}
 
-	// Create new HTTP POST reguest with jsonData as body
+	// Create new HTTP POST reguest with jsonData as Body
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		//log.Printf("Error while preparing request to url: %s %s", url, err.Error())
@@ -330,10 +406,10 @@ func getDocumentByIdHandler(c *gin.Context) {
 
 	var jsonResp map[string]interface{}
 	if err := json.Unmarshal(body, &jsonResp); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error Unmarshal resp body": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"Error Unmarshal resp Body": err.Error()})
 		return
 	}
-	//log.Print("Response body:", string(body))
+	//log.Print("Response Body:", string(Body))
 
 	c.JSON(resp.StatusCode, jsonResp)
 }
@@ -370,7 +446,7 @@ func getDevJsonArrayHandler(c *gin.Context) {
 		return
 	}
 
-	//log.Print("Response body:", string(data))
+	//log.Print("Response Body:", string(data))
 
 	c.Data(http.StatusOK, "application/json", data)
 }
