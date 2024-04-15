@@ -76,8 +76,8 @@ func main() {
 	secureRouter := router.Group("/secure")
 	secureRouter.Use(authRequired)
 	{
-		secureRouter.POST("/mockas", postMockHandler(cfg, &httpClient))
-		secureRouter.POST("/portal", getPortalHandler(cfg, &httpClient))
+		secureRouter.POST("/mock", createMockHandler(cfg, &httpClient))
+		secureRouter.POST("/portal", fetchFromPortalHandler(cfg, &httpClient))
 		secureRouter.DELETE("/logout", logoutHandler)
 		secureRouter.GET("/health", getHealthHandler)
 		secureRouter.GET("/document/:document_id", getDocumentByIdHandler)
@@ -93,7 +93,7 @@ func main() {
 	}
 }
 
-func postMockHandler(cfg *model.Cfg, client *http.Client) gin.HandlerFunc {
+func createMockHandler(cfg *model.Cfg, client *http.Client) gin.HandlerFunc {
 	//closure
 	return func(c *gin.Context) {
 		url := apigwAPIBaseUrl + "/mock/next"
@@ -116,10 +116,12 @@ func doPostForDemoFlows(c *gin.Context, url string, client *http.Client) {
 
 	var reqBody Body
 
-	if err := c.ShouldBindJSON(reqBody); err != nil {
+	if err := c.ShouldBindJSON(&reqBody); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
+
+	log.Print("reqBody: ", reqBody)
 
 	reqBodyJSON, err := json.Marshal(reqBody)
 	if err != nil {
@@ -154,10 +156,12 @@ func doPostForDemoFlows(c *gin.Context, url string, client *http.Client) {
 		return
 	}
 
+	log.Print("resp statuscode from vc: ", resp.StatusCode)
+
 	c.JSON(resp.StatusCode, jsonResp)
 }
 
-func getPortalHandler(cfg *model.Cfg, client *http.Client) gin.HandlerFunc {
+func fetchFromPortalHandler(cfg *model.Cfg, client *http.Client) gin.HandlerFunc {
 	//closure
 	return func(c *gin.Context) {
 		url := apigwAPIBaseUrl + "/portal"

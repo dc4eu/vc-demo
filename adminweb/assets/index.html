@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="theme-light">
+<html lang="en" class="theme-light" xmlns="http://www.w3.org/1999/html">
 
 <head>
     <meta charset="UTF-8">
@@ -31,7 +31,7 @@
     const clearAllContentContainers = () => {
         clearContainer("login-container");
         clearContainer("article-container");
-        clearSearchDocumentForm();
+        //clearSearchDocumentForm();
     }
 
     function displayAElement(id) {
@@ -154,39 +154,49 @@
         return responseMetaData;
     }
 
-    async function fetchJsonAndDisplayInArticleContainerFor(path) {
+    function updateTextContentInChildPreTagFor(parentElement, textContent) {
+        const preElement = parentElement.querySelector("pre");
+        preElement.textContent = textContent ?? "";
+    }
+
+    function handleErrorInArticle(err, elements) {
+        console.error("Error fetching data: ", err.message);
+
+        const errorPreElement = elements.errorDiv.querySelector("pre");
+        errorPreElement.style.color = "red";
+        updateTextContentInChildPreTagFor(elements.errorDiv, err.name + " " + err.message);
+        //updateTextContentInChildPreTagFor(elements.debugDiv, "");
+        updateTextContentInChildPreTagFor(elements.respMetaDiv, "");
+        updateTextContentInChildPreTagFor(elements.payloadDiv, "");
+    }
+
+    async function getAndDisplayInArticleContainerFor(path, articleHeaderText) {
         const url = baseUrl.concat(path);
         console.debug("Call to fetchJsonAndDisplayInArticleContainerFor: " + url);
 
-        const elements = addNewRequestResponseArticleToContainer("GET " + path);
-
-        function updateTextContentInChildPreTagFor(parentElement, textContent) {
-            const preElement = parentElement.querySelector("pre");
-            preElement.textContent = textContent ?? "";
-        }
+        const elements = addNewRequestResponseArticleToContainer(articleHeaderText);
 
         const headers = {
             'Accept': 'application/json',
-            'Content-Type': 'application/json'
         };
 
-        const request = new Request(url, {
-            method: "GET",
-            headers: headers
-        });
+        const options = {
+            method: `GET`,
+            headers: headers,
+        };
+
 
         // Skriv ut request headers för demonstration
-        console.debug(`Request method: ${request.method}`);
-        for (const [key, value] of request.headers.entries()) {
-            console.debug(`Request header ${key}: ${value}`);
-        }
+        // console.debug(`Request method: ${request.method}`);
+        // for (const [key, value] of request.headers.entries()) {
+        //     console.debug(`Request header ${key}: ${value}`);
+        // }
 
-        updateTextContentInChildPreTagFor(elements.reqMetaDiv, `time: ${new Date().toString()}, method: ${request.method}, url:
-${url} , headers: ${JSON.stringify(headers)}`)
+        updateTextContentInChildPreTagFor(elements.reqMetaDiv, `${JSON.stringify(options, null, 2)}`)
 
         try {
             //TODO: add timeout on clientside for fetch?
-            const response = await fetch(request);
+            const response = await fetch(url, options);
             const jsonBody = await response.json();
 
             if (!response.ok) {
@@ -196,18 +206,12 @@ ${url} , headers: ${JSON.stringify(headers)}`)
                     hideSecureMenyItems();
                     return;
                 }
-
-                //const jsonBody = await response.json();
-
-
-                // Skapa ett detaljerat felmeddelande
-                throw new Error(`HTTP error! status: ${response.status}, method: ${request.method}, url: ${url}, headers:
-${JSON.stringify(headers)}, body: ${JSON.stringify(jsonBody)}`);
+                throw new Error(`HTTP error! status: ${response.status}, method: ${response.method}, body: ${JSON.stringify(jsonBody, null, 2)}`);
+                //TODO: tagit bort url: ${url}, för demon
             }
 
             const responseMetaData = buildResponseMeta(response);
             updateTextContentInChildPreTagFor(elements.respMetaDiv, responseMetaData);
-
 
             console.debug(jsonBody);
 
@@ -215,14 +219,7 @@ ${JSON.stringify(headers)}, body: ${JSON.stringify(jsonBody)}`);
             //updateTextContentInChildPreTagFor(elements.debugDiv, "");
             updateTextContentInChildPreTagFor(elements.payloadDiv, JSON.stringify(jsonBody, null, 2));
         } catch (err) {
-            console.error("Error fetching data: ", err.message);
-
-            const errorPreElement = elements.errorDiv.querySelector("pre");
-            errorPreElement.style.color = "red";
-            updateTextContentInChildPreTagFor(elements.errorDiv, err.name + " " + err.message);
-            //updateTextContentInChildPreTagFor(elements.debugDiv, "");
-            updateTextContentInChildPreTagFor(elements.respMetaDiv, "");
-            updateTextContentInChildPreTagFor(elements.payloadDiv, "");
+            handleErrorInArticle(err, elements);
         }
     }
 
@@ -236,32 +233,139 @@ ${JSON.stringify(headers)}, body: ${JSON.stringify(jsonBody)}`);
         updateFetchDocumentByIdButton();
     }
 
-    const fetchDocumentById = () => {
-        console.debug("fetchDocumentById");
-        const documentIdInput = getElementById("document-id-input");
-        if (validateHasValueAndNotEmpty(documentIdInput)) {
-            const documentId = documentIdInput.value.trim();
-            console.debug("documentId: " + documentId);
 
-            const docTypeSelect = getElementById('doc-type-select');
-            const docType = docTypeSelect.value;
-            console.debug("docType: " + docType)
-            //TODO: skicka med docType i requestet (bodyn vid post)
+    async function postAndDisplayInArticleContainerFor(path, postBody, articleHeaderText) {
+        const url = baseUrl.concat(path);
+        console.debug("Call to postAndDisplayInArticleContainerFor: " + url);
 
-            // Reset search fields to enable another search
-            clearSearchDocumentForm();
+        const elements = addNewRequestResponseArticleToContainer(articleHeaderText);
 
-            //TODO: gör om till en POST istället då det kommer variera vad vi vill söka på (samt säkrare)
-            fetchJsonAndDisplayInArticleContainerFor(`/secure/document/${documentId}`)
+        const headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json; charset=utf-8',
+        };
+        const options = {
+            method: `POST`,
+            headers: headers,
+            body: JSON.stringify(postBody),
+        };
+
+        // Skriv ut request headers för demonstration
+        // console.debug(`Request method: ${request.method}`);
+        // for (const [key, value] of request.headers.entries()) {
+        //     console.debug(`Request header ${key}: ${value}`);
+        // }
+
+        updateTextContentInChildPreTagFor(elements.reqMetaDiv, `${JSON.stringify(options, null, 2)}`)
+
+        try {
+            //TODO: add timeout on clientside for fetch?
+            const response = await fetch(url, options);
+            const jsonBody = await response.json();
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    // Not auth/session expired
+                    clearAllContentContainers();
+                    hideSecureMenyItems();
+                    return;
+                }
+
+                throw new Error(`HTTP error! status: ${response.status}, method: ${response.method}, body: ${JSON.stringify(jsonBody, null, 2)}`);
+                //TODO: tagit bort url: ${url}, för demon
+            }
+
+            const responseMetaData = buildResponseMeta(response);
+            updateTextContentInChildPreTagFor(elements.respMetaDiv, responseMetaData);
+
+            console.debug(jsonBody);
+
+            updateTextContentInChildPreTagFor(elements.errorDiv, "");
+            //updateTextContentInChildPreTagFor(elements.debugDiv, "");
+            updateTextContentInChildPreTagFor(elements.payloadDiv, JSON.stringify(jsonBody, null, 2));
+        } catch (err) {
+            handleErrorInArticle(err, elements);
         }
     }
 
-    const updateFetchDocumentByIdButton = () => {
-        const input = getElementById('document-id-input');
-        const button = getElementById('fetch-document-by-id-btn');
-        // const inputIsValid = ...; //TODO: Validering för input, ex så ej blank, dvs "", eller " "- kär tr
-        button.disabled = !(input.value);
+    function doPostForDemo(path, articleHeaderText) {
+        const documentTypeElement = getElementById("document-type-select");
+        const authenticSourceElement = getElementById("authentic-source-input");
+        const authenticSourcePersonIdElement = getElementById("authentic_source_person_id-input");
+
+        if (
+            !(
+                validateHasValueAndNotEmpty(documentTypeElement)
+                && validateHasValueAndNotEmpty(authenticSourceElement)
+                && validateHasValueAndNotEmpty(authenticSourcePersonIdElement)
+            )
+        ) {
+            //TODO: visa felmeddelande i GUI
+            return
+        }
+
+        const postBody = {
+            document_type: documentTypeElement.value,
+            authentic_source: authenticSourceElement.value,
+            authentic_source_person_id: authenticSourcePersonIdElement.value,
+        };
+
+
+        postAndDisplayInArticleContainerFor(path, postBody, articleHeaderText);
+        //TODO: kanske rensa formuläret?
     }
+
+    const createMock = () => {
+        console.debug("createMock");
+        const path = "/secure/mock";
+        const articleHeaderText = "Upload";
+        doPostForDemo(path, articleHeaderText);
+    }
+
+    const fetchFromPortal = () => {
+        console.debug("fetchFromPortal");
+        const path = "/secure/portal";
+        const articleHeaderText = "Fetch";
+        doPostForDemo(path, articleHeaderText);
+    }
+
+
+    // const fetchDocumentById = () => {
+    //     console.debug("fetchDocumentById");
+    //     const documentIdInput = getElementById("document-id-input");
+    //     if (validateHasValueAndNotEmpty(documentIdInput)) {
+    //         const documentId = documentIdInput.value.trim();
+    //         console.debug("documentId: " + documentId);
+    //
+    //         const docTypeSelect = getElementById('doc-type-select');
+    //         const docType = docTypeSelect.value;
+    //         console.debug("docType: " + docType)
+    //         //TODO: skicka med docType i requestet (bodyn vid post)
+    //
+    //         // Reset search fields to enable another search
+    //         clearSearchDocumentForm();
+    //
+    //         //TODO: gör om till en POST istället då det kommer variera vad vi vill söka på (samt säkrare)
+    //         getAndDisplayInArticleContainerFor(`/secure/document/${documentId}`)
+    //     }
+    // }
+
+    const updateUploadAndFetchButtons = () => {
+        const input = getElementById('authentic_source_person_id-input');
+        const mockButton = getElementById('create-mock-btn');
+        const fetchButton = getElementById('fetch-from-portal-btn');
+
+        // const inputIsValid = ...; //TODO: Validering för input, ex så ej blank, dvs "", eller " "- kär tr
+        mockButton.disabled = !(input.value);
+        fetchButton.disabled = !(input.value);
+    }
+
+    // const updateFetchDocumentByIdButton = () => {
+    //     const input = getElementById('document-id-input');
+    //     const button = getElementById('fetch-document-by-id-btn');
+    //     // const inputIsValid = ...; //TODO: Validering för input, ex så ej blank, dvs "", eller " "- kär tr
+    //     button.disabled = !(input.value);
+    // }
 
     /** Builds an article with custom body children but does not add it to the DOM
      *
@@ -434,7 +538,7 @@ ${JSON.stringify(headers)}, body: ${JSON.stringify(jsonBody)}`);
 
         clearContainer("login-container"); //To always only have 0..1 login articles displayed
         const articleIdBasis = generateArticleIDBasis();
-        const articleDiv = buildArticle(articleIdBasis.articleID, "/login", buildLoginElements());
+        const articleDiv = buildArticle(articleIdBasis.articleID, "Login", buildLoginElements());
         const loginContainer = getElementById('login-container');
         loginContainer.prepend(articleDiv);
 
@@ -527,7 +631,7 @@ ${JSON.stringify(headers)}, body: ${JSON.stringify(jsonBody)}`);
         <div id="navbar-div" class="navbar-menu">
 
             <div id="navbar-start-div" class="navbar-start">
-                <a id="fetch-health-btn" onclick="fetchJsonAndDisplayInArticleContainerFor('/secure/health')"
+                <a id="fetch-health-btn" onclick="getAndDisplayInArticleContainerFor('/secure/health','Health')"
                    class="navbar-item">
                     Health
                 </a>
@@ -539,11 +643,11 @@ ${JSON.stringify(headers)}, body: ${JSON.stringify(jsonBody)}`);
                     </a>
                     <div class="navbar-dropdown">
                         <!-- class="navbar-item is-selected"> -->
-                        <!--                        <a onclick="fetchJsonAndDisplayInArticleContainerFor('/secure/health')" class="navbar-item">-->
+                        <!--                        <a onclick="getAndDisplayInArticleContainerFor('/secure/health')" class="navbar-item">-->
                         <!--                            Health-->
                         <!--                        </a>-->
                         <!--                        <a id="fetch-documents-btn"-->
-                        <!--                           onclick="fetchJsonAndDisplayInArticleContainerFor('/secure/documents')"-->
+                        <!--                           onclick="getAndDisplayInArticleContainerFor('/secure/documents')"-->
                         <!--                           class="navbar-item">-->
                         <!--                            Documents-->
                         <!--                        </a>-->
@@ -555,51 +659,84 @@ ${JSON.stringify(headers)}, body: ${JSON.stringify(jsonBody)}`);
                            class="navbar-item">
                             Toogle theme (dark/light)
                         </a>
-                        <a id="fetch-user-btn" onclick="fetchJsonAndDisplayInArticleContainerFor('/secure/user')"
+                        <a id="fetch-user-btn" onclick="getAndDisplayInArticleContainerFor('/secure/user','User')"
                            class="navbar-item">
                             Current User
                         </a>
-                        <a id="loginstatus-btn"
-                           onclick="fetchJsonAndDisplayInArticleContainerFor('/secure/loginstatus')"
-                           class="navbar-item">
-                            Login status
-                        </a>
-                        <hr class="navbar-divider">
+                        <!--                        <a id="loginstatus-btn"-->
+                        <!--                           onclick="getAndDisplayInArticleContainerFor('/secure/loginstatus','Login status')"-->
+                        <!--                           class="navbar-item">-->
+                        <!--                            Login status-->
+                        <!--                        </a>-->
+                        <!--                        <hr class="navbar-divider">-->
                         <!--                        <a id="show-terminal-btn" class="navbar-item">-->
                         <!--                            Terminal-->
                         <!--                        </a>-->
-                        <a id="fetch-dev-json-obj-btn"
-                           onclick="fetchJsonAndDisplayInArticleContainerFor('/secure/devjsonobj')"
-                           class="navbar-item">
-                            JSON object
-                        </a>
-                        <a id="fetch-dev-json-array-btn"
-                           onclick="fetchJsonAndDisplayInArticleContainerFor('/secure/devjsonarray')"
-                           title="for dev/test purposes only (to be removed in production)" class="navbar-item">
-                            JSON array
-                        </a>
+                        <!--                        <a id="fetch-dev-json-obj-btn"-->
+                        <!--                           onclick="getAndDisplayInArticleContainerFor('/secure/devjsonobj','Dummy json object')"-->
+                        <!--                           class="navbar-item">-->
+                        <!--                            JSON object-->
+                        <!--                        </a>-->
+                        <!--                        <a id="fetch-dev-json-array-btn"-->
+                        <!--                           onclick="getAndDisplayInArticleContainerFor('/secure/devjsonarray','Dummy json array')"-->
+                        <!--                           title="for dev/test purposes only (to be removed in production)" class="navbar-item">-->
+                        <!--                            JSON array-->
+                        <!--                        </a>-->
                     </div>
                 </div>
 
-                <div id="navbar-search-doc-div" class="navbar-item field has-addons">
+                <!-- OLD: search doc                -->
+                <!--                <div id="navbar-search-doc-div" class="navbar-item field has-addons">-->
+                <!--                    <div class="control">-->
+                <!--                        &lt;!&ndash; TODO: se över onkeyup efter updateFetchDocumentByIdButton(); och flytta ev. logiken till en func eller liknande, kanske i samma ?&ndash;&gt;-->
+                <!--                        <input id="document-id-input"-->
+                <!--                               onkeyup="updateFetchDocumentByIdButton(); if (event.key === 'Enter') { document.getElementById('fetch-document-by-id-btn').click()}"-->
+                <!--                               class="input" type="text" placeholder="Fetch document by id">-->
+                <!--                    </div>-->
+                <!--                    <div class="select">-->
+                <!--                        <select id="doc-type-select">-->
+                <!--                            <option value="EHIC">EHIC</option>-->
+                <!--                            <option value="PDA1">PDA1</option>-->
+                <!--                        </select>-->
+                <!--                    </div>-->
+                <!--                    <div class="control">-->
+                <!--                        <button id="fetch-document-by-id-btn" onclick="fetchDocumentById()" class="button" disabled>-->
+                <!--                            Fetch-->
+                <!--                        </button>-->
+                <!--                    </div>-->
+                <!--                </div>-->
+
+
+                <div id="navbar-demo-div" class="navbar-item field has-addons box">
                     <div class="control">
                         <!-- TODO: se över onkeyup efter updateFetchDocumentByIdButton(); och flytta ev. logiken till en func eller liknande, kanske i samma ?-->
-                        <input id="document-id-input"
-                               onkeyup="updateFetchDocumentByIdButton(); if (event.key === 'Enter') { document.getElementById('fetch-document-by-id-btn').click()}"
-                               class="input" type="text" placeholder="Fetch document by id">
+                        <input id="authentic_source_person_id-input" onkeyup="updateUploadAndFetchButtons()"
+                               class="input" type="text"
+                               placeholder="Authentic source person id">
                     </div>
                     <div class="select">
-                        <select id="doc-type-select">
+                        <select id="document-type-select">
                             <option value="EHIC">EHIC</option>
                             <option value="PDA1">PDA1</option>
                         </select>
                     </div>
                     <div class="control">
-                        <button id="fetch-document-by-id-btn" onclick="fetchDocumentById()" class="button" disabled>
+                        <input id="authentic-source-input"
+                               class="input" type="text" placeholder="Authentic source" value="SUNET" disabled>
+                    </div>
+                    <div class="control">
+                        <button id="create-mock-btn" onclick="createMock()" class="button" disabled>
+                            Upload
+                        </button>
+                    </div>
+                    <div class="control">
+                        <button id="fetch-from-portal-btn" onclick="fetchFromPortal()" class="button" disabled>
                             Fetch
                         </button>
                     </div>
                 </div>
+
+
             </div>
 
             <div id="navbar-end-div" class="navbar-end">
