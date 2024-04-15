@@ -62,6 +62,8 @@ func main() {
 	router.Use(setupSessionMiddleware(sessionStoreSecret, 300, "/"))
 
 	// Static route
+	router.Static("/assets", "./assets")
+
 	router.LoadHTMLFiles("./assets/index.html")
 	router.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", nil)
