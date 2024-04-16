@@ -23,7 +23,6 @@ services:
     image: docker.sunet.se/dc4eu/verifier:latest
     restart: always
     volumes:
-      - ./cert:/cert:ro
       - ./dev_config_docker.yaml:/config.yaml:ro
     depends_on:
       - redis
