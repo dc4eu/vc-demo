@@ -5,6 +5,7 @@ services:
   apigw:
     container_name: "vc_apigw"
     image: docker.sunet.se/dc4eu/apigw:latest
+    #image: docker.sunet.se/dc4eu/apigw:demo-v2
     restart: always
     volumes:
       - ./dev_config_docker.yaml:/config.yaml:ro

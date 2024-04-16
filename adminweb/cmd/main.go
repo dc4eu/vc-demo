@@ -18,6 +18,7 @@ import (
 	"vcweb1/pkg/model"
 	//Backup of some imports since the IDE sometimes removes them to fast
 	//"bytes"
+	//"context"
 	//"encoding/json"
 	//"github.com/gin-contrib/gzip"
 	//"github.com/gin-contrib/sessions"
@@ -28,6 +29,9 @@ import (
 	//"log"
 	//"net/http"
 	//"strings"
+	//"vcweb1/pkg/configuration"
+	//"vcweb1/pkg/logger"
+	//"vcweb1/pkg/model"
 )
 
 //TODO: Inför vettigare loggning (och ta bort log.Print...)
@@ -39,8 +43,16 @@ const (
 	//TODO: ta in apigwBaseUrl via config.yaml
 	apigwBaseUrl    = "http://172.16.50.2:8080"
 	apigwAPIBaseUrl = apigwBaseUrl + "/api/v1"
-	//TODO: ta in sessionUserKey via config.yaml
-	sessionUserKey = "user"
+
+	/* session... constants also used for the session cookie */
+	//TODO: ta in sessionKey via config.yaml
+	sessionName                       = "vcadminwebsession" //if changed, the web (javascript) must also be updated with the new name
+	sessionKey                        = "user"
+	sessionInactivityTimeoutInSeconds = 3600 //one hour - also the value for the cookie
+	sessionPath                       = "/"
+	sessionHttpOnly                   = true
+	sessionSecure                     = false //TODO: Aktivate for https
+	sessionSameSite                   = 0     //TODO: http.SameSiteDefaultMode //TODO: se över lämpligt val
 )
 
 /* Secret for session cookie store (16-byte, 32-, ...) */
@@ -59,7 +71,7 @@ func main() {
 	router.Use(gin.Logger())
 	//TODO: router.Use(gin.MinifyHTML())
 	router.Use(gzip.Gzip(gzip.DefaultCompression))
-	router.Use(setupSessionMiddleware(sessionStoreSecret, 300, "/"))
+	router.Use(setupSessionMiddleware(sessionStoreSecret, sessionInactivityTimeoutInSeconds, "/"))
 
 	// Static route
 	router.Static("/assets", "./assets")
@@ -99,6 +111,14 @@ func createMockHandler(cfg *model.Cfg, client *http.Client) gin.HandlerFunc {
 	//closure
 	return func(c *gin.Context) {
 		url := apigwAPIBaseUrl + "/mock/next"
+		doPostForDemoFlows(c, url, client)
+	}
+}
+
+func fetchFromPortalHandler(cfg *model.Cfg, client *http.Client) gin.HandlerFunc {
+	//closure
+	return func(c *gin.Context) {
+		url := apigwAPIBaseUrl + "/portal"
 		doPostForDemoFlows(c, url, client)
 	}
 }
@@ -163,34 +183,27 @@ func doPostForDemoFlows(c *gin.Context, url string, client *http.Client) {
 	c.JSON(resp.StatusCode, jsonResp)
 }
 
-func fetchFromPortalHandler(cfg *model.Cfg, client *http.Client) gin.HandlerFunc {
-	//closure
-	return func(c *gin.Context) {
-		url := apigwAPIBaseUrl + "/portal"
-		doPostForDemoFlows(c, url, client)
-	}
-}
-
 func setupSessionMiddleware(secret []byte, maxAge int, path string) gin.HandlerFunc {
 	// Configure session cookie store
 	store := configureSessionStore(secret, maxAge, path)
-	return sessions.Sessions("vcadminwebsession", store)
+	return sessions.Sessions(sessionName, store)
 }
 
 func configureSessionStore(secret []byte, maxAge int, path string) sessions.Store {
 	store := cookie.NewStore(secret)
 	store.Options(sessions.Options{
-		Path:   path,
-		MaxAge: maxAge, // 5 minuter i sekunder - javascript koden tar hänsyn till detta för att försöka gissa om användaren fortsatt är inloggad (om inloggad också vill säga)
-		//Secure:   true,  //TODO: Aktivera för produktion för HTTPS
-		HttpOnly: true,
+		Path:     sessionPath,
+		MaxAge:   maxAge, // 5 minuter i sekunder - javascript koden tar hänsyn till detta för att försöka gissa om användaren fortsatt är inloggad (om inloggad också vill säga)
+		Secure:   sessionSecure,
+		HttpOnly: sessionHttpOnly,
+		SameSite: sessionSameSite,
 	})
 	return store
 }
 
 func authRequired(c *gin.Context) {
 	session := sessions.Default(c)
-	user := session.Get(sessionUserKey)
+	user := session.Get(sessionKey)
 	if user == nil {
 		// Abort the request with the appropriate error code
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized/session expired"})
@@ -200,10 +213,11 @@ func authRequired(c *gin.Context) {
 	if !isLogoutRoute(c) { // Don't touch the session (including cookie) during logout
 		// Update MaxAge for the session and its cookie - extended time to expire with another 5 minutes from now
 		session.Options(sessions.Options{
-			MaxAge: 300, // 5 minuter
-			Path:   "/",
-			//Secure:   true,  //TODO: Aktivera för produktion för HTTPS
-			HttpOnly: true,
+			MaxAge:   sessionInactivityTimeoutInSeconds,
+			Path:     sessionPath,
+			Secure:   sessionSecure,
+			HttpOnly: sessionHttpOnly,
+			SameSite: sessionSameSite,
 		})
 
 		if err := session.Save(); err != nil {
@@ -243,7 +257,7 @@ func loginHandler(cfg *model.Cfg) func(c *gin.Context) {
 		}
 
 		// TODO: ev. use a userID instead of username
-		session.Set(sessionUserKey, loginBody.Username)
+		session.Set(sessionKey, loginBody.Username)
 		if err := session.Save(); err != nil { //This is also where the cookie is created
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
 			return
@@ -254,19 +268,20 @@ func loginHandler(cfg *model.Cfg) func(c *gin.Context) {
 
 func logoutHandler(c *gin.Context) {
 	session := sessions.Default(c)
-	user := session.Get(sessionUserKey)
+	user := session.Get(sessionKey)
 	if user == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid session token"})
 		return
 	}
 
 	// Delete the session and cookie
-	session.Delete(sessionUserKey)
+	session.Delete(sessionKey)
 	session.Options(sessions.Options{
-		MaxAge: -1, // Expired
-		Path:   "/",
-		//Secure:   true,  //TODO: Aktivera för produktion för HTTPS
-		HttpOnly: true,
+		MaxAge:   -1, // Expired
+		Path:     sessionPath,
+		Secure:   sessionSecure,
+		HttpOnly: sessionHttpOnly,
+		SameSite: sessionSameSite,
 	})
 	if err := session.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove session (and cookie)"})
@@ -278,7 +293,7 @@ func logoutHandler(c *gin.Context) {
 
 func getUserHandler(c *gin.Context) {
 	session := sessions.Default(c)
-	user := session.Get(sessionUserKey)
+	user := session.Get(sessionKey)
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
