@@ -26,6 +26,8 @@ common:
         name: vc_persistent_get
       vc_persistent_delete:
         name: vc_persistent_delete
+      vc_persistent_replace:
+        name: vc_persistent_replace
   key_value:
     db: 3
     addr: redis:6379

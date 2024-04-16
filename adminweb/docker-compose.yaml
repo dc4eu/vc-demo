@@ -4,8 +4,8 @@ version: "3"
 services:
   apigw:
     container_name: "vc_apigw"
-    image: docker.sunet.se/dc4eu/apigw:latest
-    #image: docker.sunet.se/dc4eu/apigw:demo-v2
+    #image: docker.sunet.se/dc4eu/apigw:latest
+    image: docker.sunet.se/dc4eu/apigw:demo-v2
     restart: always
     volumes:
       - ./dev_config_docker.yaml:/config.yaml:ro
@@ -21,7 +21,7 @@ services:
 
   verifier:
     container_name: "vc_verifier"
-    image: docker.sunet.se/dc4eu/verifier:latest
+    image: docker.sunet.se/dc4eu/verifier:demo-v2
     restart: always
     volumes:
       - ./dev_config_docker.yaml:/config.yaml:ro
@@ -36,7 +36,7 @@ services:
 
   registry:
     container_name: "vc_registry"
-    image: docker.sunet.se/dc4eu/registry:latest
+    image: docker.sunet.se/dc4eu/registry:demo-v2
     restart: always
     volumes:
       - ./dev_config_docker.yaml:/config.yaml:ro
@@ -51,7 +51,7 @@ services:
 
   cache:
     container_name: "vc_cache"
-    image: docker.sunet.se/dc4eu/cache:latest
+    image: docker.sunet.se/dc4eu/cache:demo-v2
     restart: always
     volumes:
       - ./dev_config_docker.yaml:/config.yaml:ro
@@ -65,7 +65,7 @@ services:
 
   persistent:
     container_name: "vc_persistent"
-    image: docker.sunet.se/dc4eu/persistent:latest
+    image: docker.sunet.se/dc4eu/persistent:demo-v2
     restart: always
     volumes:
       - ./dev_config_docker.yaml:/config.yaml:ro
