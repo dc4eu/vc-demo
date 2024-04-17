@@ -2,3 +2,8 @@
 web1:
   username: "admin"
   password: "secret123"
+  services:
+    apigw:
+      addr: "http://172.16.50.2:8080"
+    mockas:
+      addr: "http://172.16.50.13:8080"

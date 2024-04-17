@@ -4,11 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/gin-contrib/gzip"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/cookie"
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"io"
 	"log"
 	"net/http"
@@ -16,6 +11,12 @@ import (
 	"vcweb1/pkg/configuration"
 	"vcweb1/pkg/logger"
 	"vcweb1/pkg/model"
+
+	"github.com/gin-contrib/gzip"
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	//Backup of some imports since the IDE sometimes removes them to fast
 	//"bytes"
 	//"context"
@@ -41,10 +42,10 @@ import (
 
 const (
 	//TODO: ta in apigwBaseUrl via config.yaml
-	apigwBaseUrl     = "http://172.16.50.2:8080"
-	mockasBaseUrl    = "http://172.16.50.13:8080"
-	mockasAPIBaseURL = mockasBaseUrl + "/api/v1"
-	apigwAPIBaseUrl  = apigwBaseUrl + "/api/v1"
+	//apigwBaseUrl     = "http://172.16.50.2:8080"
+	//mockasBaseUrl    = "http://172.16.50.13:8080"
+	//mockasAPIBaseURL = mockasBaseUrl + "/api/v1"
+	//apigwAPIBaseUrl  = apigwBaseUrl + "/api/v1"
 
 	/* session... constants also used for the session cookie */
 	//TODO: ta in sessionKey via config.yaml
@@ -95,8 +96,8 @@ func main() {
 		secureRouter.POST("/mock", createMockHandler(cfg, &httpClient))
 		secureRouter.POST("/portal", fetchFromPortalHandler(cfg, &httpClient))
 		secureRouter.DELETE("/logout", logoutHandler)
-		secureRouter.GET("/health", getHealthHandler)
-		secureRouter.GET("/document/:document_id", getDocumentByIdHandler)
+		secureRouter.GET("/health", getHealthHandler(cfg, &httpClient))
+		secureRouter.GET("/document/:document_id", getDocumentByIdHandler(cfg, &httpClient))
 		secureRouter.GET("/devjsonobj", getDevJsonObjHandler)
 		secureRouter.GET("/devjsonarray", getDevJsonArrayHandler)
 		secureRouter.GET("/user", getUserHandler)
@@ -112,7 +113,7 @@ func main() {
 func createMockHandler(cfg *model.Cfg, client *http.Client) gin.HandlerFunc {
 	//closure
 	return func(c *gin.Context) {
-		url := mockasAPIBaseURL + "/mock/next"
+		url := cfg.Web1.Services.MockAS.Addr + "/api/v1/mock/next"
 		doPostForDemoFlows(c, url, client)
 	}
 }
@@ -120,7 +121,7 @@ func createMockHandler(cfg *model.Cfg, client *http.Client) gin.HandlerFunc {
 func fetchFromPortalHandler(cfg *model.Cfg, client *http.Client) gin.HandlerFunc {
 	//closure
 	return func(c *gin.Context) {
-		url := apigwAPIBaseUrl + "/portal"
+		url := cfg.Web1.Services.APIGW.Addr + "/api/v1/portal"
 		doPostForDemoFlows(c, url, client)
 	}
 }
@@ -304,45 +305,51 @@ func getLoginStatusHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "You are logged in"})
 }
 
-func getHealthHandler(c *gin.Context) {
-	//return func(c *gin.Context) {
-	url := apigwBaseUrl + "/health"
-	//log.Printf("URL: %s", url)
+func getHealthHandler(cfg *model.Cfg, client *http.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		//url := cfg.Web1.Services.MockAS.Addr + "/api/v1/mock/next"
+		//doPostForDemoFlows(c, url, client)
 
-	//TODO: MS: vad är konceptet för att hantera/köra https client mot apigw?
-	//TODO: lägga in timeout
-	//TODO: på flera ställen: HTTP Client: You create a new HTTP client for every request. Instead of creating a new client for every HTTP request, use a single client for all requests can be beneficial so that TCP connections can be reused.
-	client := http.Client{}
+		//return func(c *gin.Context) {
+		url := cfg.Web1.Services.APIGW.Addr + "/health"
+		//log.Printf("URL: %s", url)
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		//log.Printf("Error while preparing request to url: %s %s", url, err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"Error creating new http req": err.Error()})
-		return
+		//TODO: MS: vad är konceptet för att hantera/köra https client mot apigw?
+		//TODO: lägga in timeout
+		//TODO: på flera ställen: HTTP Client: You create a new HTTP client for every request. Instead of creating a new client for every HTTP request, use a single client for all requests can be beneficial so that TCP connections can be reused.
+		//client := http.Client{}
+
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			//log.Printf("Error while preparing request to url: %s %s", url, err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"Error creating new http req": err.Error()})
+			//return nil
+		}
+
+		resp, err := client.Do(req)
+		//if resp != nil {
+		//	log.Print("Respons header:", resp.Header)
+		//}
+		if err != nil {
+			//log.Printf("Error during reguest to url: %s %s", url, err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"Error req": err.Error()})
+			//			return nil
+		}
+
+		defer resp.Body.Close()
+		data, err := io.ReadAll(resp.Body)
+		if err != nil {
+			//log.Printf("Error during reguest to url: %s %s", url, err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"Error read resp": err.Error()})
+			//			return nil
+		}
+
+		//log.Print("Response Body:", string(data))
+
+		c.Data(resp.StatusCode, "application/json", data)
+		//}
 	}
 
-	resp, err := client.Do(req)
-	//if resp != nil {
-	//	log.Print("Respons header:", resp.Header)
-	//}
-	if err != nil {
-		//log.Printf("Error during reguest to url: %s %s", url, err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"Error req": err.Error()})
-		return
-	}
-
-	defer resp.Body.Close()
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		//log.Printf("Error during reguest to url: %s %s", url, err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"Error read resp": err.Error()})
-		return
-	}
-
-	//log.Print("Response Body:", string(data))
-
-	c.Data(resp.StatusCode, "application/json", data)
-	//}
 }
 
 func isValidUUID(str string) bool {
@@ -357,85 +364,88 @@ func isValidUUID(str string) bool {
 	return true
 }
 
-func getDocumentByIdHandler(c *gin.Context) {
+func getDocumentByIdHandler(cfg *model.Cfg, client *http.Client) gin.HandlerFunc {
 
-	documentId := c.Param("document_id")
+	return func(c *gin.Context) {
 
-	if !isValidUUID(documentId) {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "UUID expected or has wrong format"})
-		return
+		documentId := c.Param("document_id")
+
+		if !isValidUUID(documentId) {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "UUID expected or has wrong format"})
+			return
+		}
+
+		url := cfg.Web1.Services.APIGW.Addr + "/api/v1/portal"
+		//log.Printf("URL: %s", url)
+
+		//TODO: MS: vad är konceptet för att hantera/köra https client mot apigw?
+		//TODO: lägga in timeout
+		//client := http.Client{}
+
+		jsonBody := map[string]string{
+			//"authentic_source": "SUNET",
+			//"document_id":      documentId,
+			//"document_type":    "EHIC",
+			"authentic_source":           "SUNET",
+			"authentic_source_person_id": documentId,
+			"validity_from":              "1970-01-01",
+			"validity_to":                "1970-01-01",
+		}
+
+		/*
+			/api/v1/portal
+
+			"authentic_source"
+			"authentic_source_person_id"
+			"validity_from"
+			"validity_to"
+		*/
+
+		// Serialize 'jsonBody' to JSON-format
+		jsonData, err := json.Marshal(jsonBody)
+		if err != nil {
+			//log.Printf("Error marshalling jsonBody: %s", err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error marshalling jsonBody"})
+			return
+		}
+
+		// Create new HTTP POST reguest with jsonData as Body
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+		if err != nil {
+			//log.Printf("Error while preparing request to url: %s %s", url, err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"Error creating new http req": err.Error()})
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json")
+
+		resp, err := client.Do(req)
+		//if resp != nil {
+		//	log.Print("Respons header:", resp.Header)
+		//}
+		if err != nil {
+			//log.Printf("Error during reguest to url: %s %s", url, err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"Error req": err.Error()})
+			return
+		}
+
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			//log.Printf("Error during reguest to url: %s %s", url, err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"Error read resp": err.Error()})
+			return
+		}
+
+		var jsonResp map[string]interface{}
+		if err := json.Unmarshal(body, &jsonResp); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"Error Unmarshal resp Body": err.Error()})
+			return
+		}
+		//log.Print("Response Body:", string(Body))
+
+		c.JSON(resp.StatusCode, jsonResp)
 	}
-
-	url := apigwAPIBaseUrl + "/portal"
-	//log.Printf("URL: %s", url)
-
-	//TODO: MS: vad är konceptet för att hantera/köra https client mot apigw?
-	//TODO: lägga in timeout
-	client := http.Client{}
-
-	jsonBody := map[string]string{
-		//"authentic_source": "SUNET",
-		//"document_id":      documentId,
-		//"document_type":    "EHIC",
-		"authentic_source":           "SUNET",
-		"authentic_source_person_id": documentId,
-		"validity_from":              "1970-01-01",
-		"validity_to":                "1970-01-01",
-	}
-
-	/*
-		/api/v1/portal
-
-		"authentic_source"
-		"authentic_source_person_id"
-		"validity_from"
-		"validity_to"
-	*/
-
-	// Serialize 'jsonBody' to JSON-format
-	jsonData, err := json.Marshal(jsonBody)
-	if err != nil {
-		//log.Printf("Error marshalling jsonBody: %s", err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error marshalling jsonBody"})
-		return
-	}
-
-	// Create new HTTP POST reguest with jsonData as Body
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		//log.Printf("Error while preparing request to url: %s %s", url, err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"Error creating new http req": err.Error()})
-		return
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := client.Do(req)
-	//if resp != nil {
-	//	log.Print("Respons header:", resp.Header)
-	//}
-	if err != nil {
-		//log.Printf("Error during reguest to url: %s %s", url, err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"Error req": err.Error()})
-		return
-	}
-
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		//log.Printf("Error during reguest to url: %s %s", url, err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"Error read resp": err.Error()})
-		return
-	}
-
-	var jsonResp map[string]interface{}
-	if err := json.Unmarshal(body, &jsonResp); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error Unmarshal resp Body": err.Error()})
-		return
-	}
-	//log.Print("Response Body:", string(Body))
-
-	c.JSON(resp.StatusCode, jsonResp)
 }
 
 /* TODO: remove before production */

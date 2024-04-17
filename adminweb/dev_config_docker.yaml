@@ -84,4 +84,4 @@ apigw:
 mock_as:
   api_server:
     addr: :8080
-  datastore_url: http://vc_apigw:8080
+  datastore_url: http://vc_web_apigw:8080

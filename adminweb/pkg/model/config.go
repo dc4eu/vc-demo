@@ -16,6 +16,14 @@ type Common struct {
 type Web1 struct {
 	Username string `yaml:"username" validate:"required"`
 	Password string `yaml:"password" validate:"required"`
+	Services struct {
+		APIGW struct {
+			Addr string `yaml:"addr"`
+		} `yaml:"apigw"`
+		MockAS struct {
+			Addr string `yaml:"addr"`
+		} `yaml:"mockas"`
+	} `yaml:"services"`
 }
 
 // Cfg is the main configuration structure for this application
