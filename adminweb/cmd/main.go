@@ -41,8 +41,10 @@ import (
 
 const (
 	//TODO: ta in apigwBaseUrl via config.yaml
-	apigwBaseUrl    = "http://172.16.50.2:8080"
-	apigwAPIBaseUrl = apigwBaseUrl + "/api/v1"
+	apigwBaseUrl     = "http://172.16.50.2:8080"
+	mockasBaseUrl    = "http://172.16.50.13:8080"
+	mockasAPIBaseURL = mockasBaseUrl + "/api/v1"
+	apigwAPIBaseUrl  = apigwBaseUrl + "/api/v1"
 
 	/* session... constants also used for the session cookie */
 	//TODO: ta in sessionKey via config.yaml
@@ -110,7 +112,7 @@ func main() {
 func createMockHandler(cfg *model.Cfg, client *http.Client) gin.HandlerFunc {
 	//closure
 	return func(c *gin.Context) {
-		url := apigwAPIBaseUrl + "/mock/next"
+		url := mockasAPIBaseURL + "/mock/next"
 		doPostForDemoFlows(c, url, client)
 	}
 }
@@ -179,6 +181,7 @@ func doPostForDemoFlows(c *gin.Context, url string, client *http.Client) {
 	}
 
 	log.Print("resp statuscode from vc: ", resp.StatusCode)
+	log.Print("#### resp body: ", jsonResp)
 
 	c.JSON(resp.StatusCode, jsonResp)
 }
