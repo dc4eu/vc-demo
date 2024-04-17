@@ -37,23 +37,28 @@ common:
     recovery_level: 2
     size: 256
 
-apigw:
+issuer:
   api_server:
     addr: :8080
-
-cache:
-  api_server:
-    addr: :8080
-
-persistent:
-  api_server:
-    addr: :8080
+  rpc_server:
+    addr: :8090
+  http_proxy:
+  log:
+    level:
+  datastore:
+    addr: datastore:8080
   
 datastore:
   api_server:
     addr: :8080
   rpc_server: 
     addr: datastore:8090
+  
+verifier:
+  api_server:
+    addr: :8080
+  rpc_server:
+    addr: verifier:8090
 
 registry:
   api_server:
@@ -63,8 +68,20 @@ registry:
     init_leaf: 575cea4a-5725-11ee-8287-2b486b7ace28
   rpc_server:
     addr: registry:8090
-  
+
+cache:
+  api_server:
+    addr: :8080
+
+persistent:
+  api_server:
+    addr: :8080
+
+apigw:
+  api_server:
+    addr: :8080
+
 mock_as:
   api_server:
     addr: :8080
-  datastore_url: http://vc_demo_apigw:8080
+  datastore_url: http://vc_apigw:8080
