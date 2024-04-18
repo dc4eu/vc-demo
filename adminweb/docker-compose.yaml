@@ -4,7 +4,6 @@ version: "3"
 services:
   apigw:
     container_name: "vc_web_apigw"
-    #image: docker.sunet.se/dc4eu/apigw:latest
     image: docker.sunet.se/dc4eu/apigw:demo-v2
     restart: always
     volumes:
@@ -94,7 +93,7 @@ services:
 
   web1:
     container_name: "vc_web_web1"
-    image: docker.sunet.se/dc4eu/web1:latest
+    image: docker.sunet.se/dc4eu/web1:demo-v3
     restart: always
     volumes:
       - ./config.yaml:/config.yaml:ro
