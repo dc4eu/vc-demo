@@ -14,9 +14,12 @@ type Common struct {
 }
 
 type Web1 struct {
-	Username string `yaml:"username" validate:"required"`
-	Password string `yaml:"password" validate:"required"`
-	Services struct {
+	// Login: user and password
+	Username                       string `yaml:"username" validate:"required"`
+	Password                       string `yaml:"password" validate:"required"`
+	SessionCookieAuthenticationKey string `yaml:"session_cookie_authentication_key" validate:"required"`
+	SessionStoreEncryptionKey      string `yaml:"session_store_encryption_key" validate:"required"`
+	Services                       struct {
 		APIGW struct {
 			Addr string `yaml:"addr"`
 		} `yaml:"apigw"`

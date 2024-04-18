@@ -2,6 +2,8 @@
 web1:
   username: "admin"
   password: "secret123"
+  session_cookie_authentication_key: "c61b0a82cd86d4f9ae1b2b366f9087139352dcbdbbbfa6541c6a82b30171dc8a4f8eca0eeccf9cc1640b96876779757663efb6d25eeb8422b1326aa61ff5444d"
+  session_store_encryption_key: "1841c012073c8b5da3f26ce709b4faf1"
   services:
     apigw:
       addr: "http://172.16.50.2:8080"
