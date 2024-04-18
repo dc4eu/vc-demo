@@ -1,11 +1,10 @@
 <!DOCTYPE html>
-<html lang="en" class="theme-light" xmlns="http://www.w3.org/1999/html">
+<html lang="en" class="theme-light">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/assets/css/bulma.min.css">
-<!--    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css">-->
     <!--TODO: add favico -->
     <title>VC demo web</title>
 </head>
@@ -20,6 +19,10 @@
         getElementById(id)?.remove();
     }
 
+    const validateHasValueAndNotEmpty = (element) => {
+        return element && element.value && element.value.trim() !== "" && element.value.trim() !== " ";
+    }
+
     const clearContainer = (id) => {
         console.debug(`Clearing element : ${id}`);
         const element = getElementById(id);
@@ -31,7 +34,6 @@
     const clearAllContentContainers = () => {
         clearContainer("login-container");
         clearContainer("article-container");
-        //clearSearchDocumentForm();
     }
 
     function displayAElement(id) {
@@ -64,7 +66,7 @@
 
     let currentIdNumber = 0;
     const secureGenerateUUID = () => {
-        //TODO: JonL: hur kan jag få till UUID:er, medför "Uncaught TypeError: crypto.randomUUID is not a function"
+        //TODO: JonL: hur kan jag få till UUID:er, medför crypto.randomUUID() "Uncaught TypeError: crypto.randomUUID is not a function"
         //return crypto.randomUUID();
         return currentIdNumber++;
     };
@@ -88,31 +90,16 @@
         };
     }
 
-    //TODO: Inför kontroll om att användaren med största sannolikhet är inloggad, om ej skicka till login med något meddelande om det
-
     function isLoggedIn() {
         const cookie = document.cookie
         if (cookie && cookie.match(/vcadminwebsession=(.*?)(;|$)/)[1]) {
             console.debug("User is logged in");
-            // TODO: visa en timer när sessionen upphör att gälla om inga nya secure request utförs
-            // // Beräkna när cookien upphör att gälla
-            // const expiryDate = new Date(Date.now() + maxAge * 1000);
-            //
-            // // Visa en timer som visar hur länge användaren har varit inloggad
-            // const timerElement = document.getElementById("timer");
-            // const updateTimer = () => {
-            //     const remainingTime = Math.floor((expiryDate - Date.now()) / 1000);
-            //     timerElement.textContent = `${remainingTime} sekunder kvar`;
-            // };
-            // updateTimer();
-            // setInterval(updateTimer, 1000);
             return true;
         }
         console.debug("User is not logged in");
-        //Note: Giltighetstiden hanteras av webbläsaren och en cookie försvinner från document.cookie när den har löpt ut.
+        //Note: Expire time for cookie is handled by the browser and is removed from document.cookie when expired
         return false;
     }
-
 
     const addNewRequestResponseArticleToContainer = (articleHeaderText) => {
         const articleIDBasis = generateArticleIDBasis();
@@ -132,26 +119,21 @@
             reqMetaDiv: buildDiv('Request meta', 'req-meta'),
             errorDiv: buildDiv('Error', 'error'),
             respMetaDiv: buildDiv('Respons meta', 'resp-meta'),
-            //debugDiv: buildDiv('Debug', 'debug-meta'),
             payloadDiv: buildDiv('Payload', 'payload'),
         };
 
-        const articleDiv = buildArticle(articleID, articleHeaderText, [bodyChildren.reqMetaDiv, //bodyChildren.debugDiv,
-            bodyChildren.errorDiv, bodyChildren.respMetaDiv, bodyChildren.payloadDiv]);
+        const articleDiv = buildArticle(articleID, articleHeaderText, [bodyChildren.reqMetaDiv, bodyChildren.errorDiv, bodyChildren.respMetaDiv, bodyChildren.payloadDiv]);
         const articleContainer = getElementById('article-container');
         articleContainer.prepend(articleDiv);
-
         return bodyChildren;
     }
 
     function buildResponseMeta(response) {
-        const status = response.status; // HTTP-statuskoden
-        const statusText = response.statusText; // Status textbeskrivning ("OK", "Not Found", etc.)
-        const respUrl = response.url; // Den slutliga URL:en efter omdirigeringar
-        const contentType = response.headers.get('Content-Type'); // Innehållstypen från svaret
-        const responseMetaData = `Response status: ${status} (${statusText}), URL: ${respUrl}, Content-Type: ${contentType}`;
-        console.debug(responseMetaData);
-        return responseMetaData;
+        const status = response.status; //
+        const statusText = response.statusText;
+        const respUrl = response.url;
+        const contentType = response.headers.get('Content-Type');
+        return `Response status: ${status} (${statusText}), url: ${respUrl}, Content-Type: ${contentType}`;
     }
 
     function updateTextContentInChildPreTagFor(parentElement, textContent) {
@@ -165,14 +147,13 @@
         const errorPreElement = elements.errorDiv.querySelector("pre");
         errorPreElement.style.color = "red";
         updateTextContentInChildPreTagFor(elements.errorDiv, err.name + " " + err.message);
-        //updateTextContentInChildPreTagFor(elements.debugDiv, "");
         updateTextContentInChildPreTagFor(elements.respMetaDiv, "");
         updateTextContentInChildPreTagFor(elements.payloadDiv, "");
     }
 
     async function getAndDisplayInArticleContainerFor(path, articleHeaderText) {
         const url = baseUrl.concat(path);
-        console.debug("Call to fetchJsonAndDisplayInArticleContainerFor: " + url);
+        console.debug("Call to getAndDisplayInArticleContainerFor: " + url);
 
         const elements = addNewRequestResponseArticleToContainer(articleHeaderText);
 
@@ -185,19 +166,13 @@
             headers: headers,
         };
 
-
-        // Skriv ut request headers för demonstration
-        // console.debug(`Request method: ${request.method}`);
-        // for (const [key, value] of request.headers.entries()) {
-        //     console.debug(`Request header ${key}: ${value}`);
-        // }
-
         updateTextContentInChildPreTagFor(elements.reqMetaDiv, `${JSON.stringify(options, null, 2)}`)
 
         try {
             //TODO: add timeout on clientside for fetch?
             const response = await fetch(url, options);
             const jsonBody = await response.json();
+            console.debug(jsonBody);
 
             if (!response.ok) {
                 if (response.status === 401) {
@@ -206,31 +181,15 @@
                     hideSecureMenyItems();
                     return;
                 }
-                throw new Error(`HTTP error! status: ${response.status}, method: ${response.method}, body: ${JSON.stringify(jsonBody, null, 2)}`);
-                //TODO: tagit bort url: ${url}, för demon
+                throw new Error(`HTTP error! status: ${response.status}, method: ${response.method}, url: ${url}, body: ${JSON.stringify(jsonBody, null, 2)}`);
             }
 
-            const responseMetaData = buildResponseMeta(response);
-            updateTextContentInChildPreTagFor(elements.respMetaDiv, responseMetaData);
-
-            console.debug(jsonBody);
-
+            updateTextContentInChildPreTagFor(elements.respMetaDiv, buildResponseMeta(response));
             updateTextContentInChildPreTagFor(elements.errorDiv, "");
-            //updateTextContentInChildPreTagFor(elements.debugDiv, "");
             updateTextContentInChildPreTagFor(elements.payloadDiv, JSON.stringify(jsonBody, null, 2));
         } catch (err) {
             handleErrorInArticle(err, elements);
         }
-    }
-
-    const validateHasValueAndNotEmpty = (element) => {
-        return element && element.value && element.value.trim() !== "" && element.value.trim() !== " ";
-    }
-
-    function clearSearchDocumentForm(docTypeSelect) {
-        getElementById("document-id-input").value = "";
-        getElementById('doc-type-select').selectedIndex = 0;
-        updateFetchDocumentByIdButton();
     }
 
 
@@ -250,18 +209,13 @@
             body: JSON.stringify(postBody),
         };
 
-        // Skriv ut request headers för demonstration
-        // console.debug(`Request method: ${request.method}`);
-        // for (const [key, value] of request.headers.entries()) {
-        //     console.debug(`Request header ${key}: ${value}`);
-        // }
-
         updateTextContentInChildPreTagFor(elements.reqMetaDiv, `${JSON.stringify(options, null, 2)}`)
 
         try {
             //TODO: add timeout on clientside for fetch?
             const response = await fetch(url, options);
             const jsonBody = await response.json();
+            console.debug(jsonBody);
 
             if (!response.ok) {
                 if (response.status === 401) {
@@ -270,18 +224,11 @@
                     hideSecureMenyItems();
                     return;
                 }
-
-                throw new Error(`HTTP error! status: ${response.status}, method: ${response.method}, body: ${JSON.stringify(jsonBody, null, 2)}`);
-                //TODO: tagit bort url: ${url}, för demon
+                throw new Error(`HTTP error! status: ${response.status}, method: ${response.method}, url: ${url}, body: ${JSON.stringify(jsonBody, null, 2)}`);
             }
 
-            const responseMetaData = buildResponseMeta(response);
-            updateTextContentInChildPreTagFor(elements.respMetaDiv, responseMetaData);
-
-            console.debug(jsonBody);
-
+            updateTextContentInChildPreTagFor(elements.respMetaDiv, buildResponseMeta(response));
             updateTextContentInChildPreTagFor(elements.errorDiv, "");
-            //updateTextContentInChildPreTagFor(elements.debugDiv, "");
             updateTextContentInChildPreTagFor(elements.payloadDiv, JSON.stringify(jsonBody, null, 2));
         } catch (err) {
             handleErrorInArticle(err, elements);
@@ -300,7 +247,7 @@
                 && validateHasValueAndNotEmpty(authenticSourcePersonIdElement)
             )
         ) {
-            //TODO: visa felmeddelande i GUI
+            //TODO: show an error message for input params
             return
         }
 
@@ -310,11 +257,10 @@
             authentic_source_person_id: authenticSourcePersonIdElement.value,
         };
 
-
         postAndDisplayInArticleContainerFor(path, postBody, articleHeaderText);
-        //TODO: kanske rensa formuläret?
     }
 
+    /* ie upload */
     const createMock = () => {
         console.debug("createMock");
         const path = "/secure/mock";
@@ -329,43 +275,15 @@
         doPostForDemo(path, articleHeaderText);
     }
 
-
-    // const fetchDocumentById = () => {
-    //     console.debug("fetchDocumentById");
-    //     const documentIdInput = getElementById("document-id-input");
-    //     if (validateHasValueAndNotEmpty(documentIdInput)) {
-    //         const documentId = documentIdInput.value.trim();
-    //         console.debug("documentId: " + documentId);
-    //
-    //         const docTypeSelect = getElementById('doc-type-select');
-    //         const docType = docTypeSelect.value;
-    //         console.debug("docType: " + docType)
-    //         //TODO: skicka med docType i requestet (bodyn vid post)
-    //
-    //         // Reset search fields to enable another search
-    //         clearSearchDocumentForm();
-    //
-    //         //TODO: gör om till en POST istället då det kommer variera vad vi vill söka på (samt säkrare)
-    //         getAndDisplayInArticleContainerFor(`/secure/document/${documentId}`)
-    //     }
-    // }
-
     const updateUploadAndFetchButtons = () => {
         const input = getElementById('authentic_source_person_id-input');
         const mockButton = getElementById('create-mock-btn');
         const fetchButton = getElementById('fetch-from-portal-btn');
 
-        // const inputIsValid = ...; //TODO: Validering för input, ex så ej blank, dvs "", eller " "- kär tr
+        //TODO: Validate input values?
         mockButton.disabled = !(input.value);
         fetchButton.disabled = !(input.value);
     }
-
-    // const updateFetchDocumentByIdButton = () => {
-    //     const input = getElementById('document-id-input');
-    //     const button = getElementById('fetch-document-by-id-btn');
-    //     // const inputIsValid = ...; //TODO: Validering för input, ex så ej blank, dvs "", eller " "- kär tr
-    //     button.disabled = !(input.value);
-    // }
 
     /** Builds an article with custom body children but does not add it to the DOM
      *
@@ -405,7 +323,6 @@
         return article;
     }
 
-
     async function doLogin() {
         const url = baseUrl.concat("/login");
         console.debug("doLogin for url: " + url)
@@ -420,8 +337,6 @@
         const passwordInput = getElementById("password-input");
         const password = passwordInput.value;
         passwordInput.disabled = true;
-
-        //console.debug("Login try with: ", username, password);
 
         const postBody = {
             username: username,
@@ -443,15 +358,11 @@
             const response = await fetch(url, request);
 
             if (!response.ok) {
-                //TODO: bättre felmeddelande
                 throw new Error(`HTTP error! status: ${response.status}, method: ${request.method}, url: ${url}, headers: ${JSON.stringify(response.headers)}`);
             }
 
-            // Loggar metadata för response
-            buildResponseMeta(response);
-
-            const jsonPromise = await response.json();
-            console.debug(jsonPromise);
+            // const jsonBody = await response.json();
+            // console.debug(jsonBody);
             authOK = true;
         } catch (err) {
             console.debug("Login attempt failed: ", err.message);
@@ -460,9 +371,7 @@
         if (authOK) {
             clearContainer("login-container");
             displaySecureMenyItems();
-            //TODO: visa menyer som ska vara dolda när man ej är auth - även det sistnämnda behöver fixas (dvs ej visa ~privata
-
-            //TODO: show logged in user
+            //TODO: show logged in user?
         } else {
             usernameInput.disabled = false;
             passwordInput.disabled = false;
@@ -559,28 +468,13 @@
             headers: headers
         });
 
-        // Skriv ut request headers för demonstration
-        // console.debug(`Request method: ${request.method}`);
-        // for (const [key, value] of request.headers.entries()) {
-        //     console.debug(`Request header ${key}: ${value}`);
-        // }
-
         //TODO: inför felhantering
         await fetch(request);
         hideSecureMenyItems();
         clearAllContentContainers();
     }
 
-    // document.addEventListener('DOMContentLoaded', function () {
-    //     // Hides all secure menu iterm when page is loaded
-    //     // Comment out the line below to display secure meny items on page load regardless of auth or not
-    //     hideSecureMenyItems();
-    //
-    // });
-
     window.addEventListener('load', function () {
-        // Hides all secure menu iterm when page is loaded (including css, images, etc)
-        // Comment out the line below to display secure meny items on page load regardless of auth or not
         if (isLoggedIn()) {
             displaySecureMenyItems();
         } else {
@@ -591,22 +485,13 @@
 
 <body>
 
-<!--<div id="debug" class="box"></div>-->
-<!--<script>-->
-<!--    const debugElement = document.getElementById("debug");-->
-<!--    debugElement.innerHTML = "<b>window.location: </b> " + window.location;-->
-<!--</script>-->
-
-
+<!-- TOP MENY START -->
 <div class="box">
-
-
     <nav id="nav-nav" class="navbar" role="navigation" aria-label="main navigation">
 
-        <!-- -->
-        <!-- TODO: add navbar-logo -->
         <div id="navbar-brand-div" class="navbar-brand">
             <p class="navbar-item is-info"><b>VC demo web</b></p>
+            <!-- TODO: add navbar-logo, exampel below -->
             <!--        <a class="navbar-item" href="https://bulma.io">-->
             <!--            <svg width="640" height="160" viewBox="0 0 640 160" fill="none" xmlns="http://www.w3.org/2000/svg">-->
             <!--                <path fill-rule="evenodd" clip-rule="evenodd"-->
@@ -615,7 +500,6 @@
             <!--                <path fill-rule="evenodd" clip-rule="evenodd" d="M0 110L10 40L50 0L100 50L70 80L110 120L50 160L0 110Z"-->
             <!--                      fill="#00D1B2"/>-->
             <!--            </svg>-->
-
             <!--        </a>-->
 
             <!--        <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarBasicExample">-->
@@ -642,19 +526,6 @@
                         Dev/test support
                     </a>
                     <div class="navbar-dropdown">
-                        <!-- class="navbar-item is-selected"> -->
-                        <!--                        <a onclick="getAndDisplayInArticleContainerFor('/secure/health')" class="navbar-item">-->
-                        <!--                            Health-->
-                        <!--                        </a>-->
-                        <!--                        <a id="fetch-documents-btn"-->
-                        <!--                           onclick="getAndDisplayInArticleContainerFor('/secure/documents')"-->
-                        <!--                           class="navbar-item">-->
-                        <!--                            Documents-->
-                        <!--                        </a>-->
-                        <!--                        <hr class="navbar-divider">-->
-                        <!--                        <a id="show-wallet-btn" class="navbar-item">-->
-                        <!--                            Wallet (simple test simulator)-->
-                        <!--                        </a>-->
                         <a id="toggle-theme-btn" onclick="toogleThemeDarkLight()"
                            class="navbar-item">
                             Toogle theme (dark/light)
@@ -663,53 +534,11 @@
                            class="navbar-item">
                             Current User
                         </a>
-                        <!--                        <a id="loginstatus-btn"-->
-                        <!--                           onclick="getAndDisplayInArticleContainerFor('/secure/loginstatus','Login status')"-->
-                        <!--                           class="navbar-item">-->
-                        <!--                            Login status-->
-                        <!--                        </a>-->
-                        <!--                        <hr class="navbar-divider">-->
-                        <!--                        <a id="show-terminal-btn" class="navbar-item">-->
-                        <!--                            Terminal-->
-                        <!--                        </a>-->
-                        <!--                        <a id="fetch-dev-json-obj-btn"-->
-                        <!--                           onclick="getAndDisplayInArticleContainerFor('/secure/devjsonobj','Dummy json object')"-->
-                        <!--                           class="navbar-item">-->
-                        <!--                            JSON object-->
-                        <!--                        </a>-->
-                        <!--                        <a id="fetch-dev-json-array-btn"-->
-                        <!--                           onclick="getAndDisplayInArticleContainerFor('/secure/devjsonarray','Dummy json array')"-->
-                        <!--                           title="for dev/test purposes only (to be removed in production)" class="navbar-item">-->
-                        <!--                            JSON array-->
-                        <!--                        </a>-->
                     </div>
                 </div>
 
-                <!-- OLD: search doc                -->
-                <!--                <div id="navbar-search-doc-div" class="navbar-item field has-addons">-->
-                <!--                    <div class="control">-->
-                <!--                        &lt;!&ndash; TODO: se över onkeyup efter updateFetchDocumentByIdButton(); och flytta ev. logiken till en func eller liknande, kanske i samma ?&ndash;&gt;-->
-                <!--                        <input id="document-id-input"-->
-                <!--                               onkeyup="updateFetchDocumentByIdButton(); if (event.key === 'Enter') { document.getElementById('fetch-document-by-id-btn').click()}"-->
-                <!--                               class="input" type="text" placeholder="Fetch document by id">-->
-                <!--                    </div>-->
-                <!--                    <div class="select">-->
-                <!--                        <select id="doc-type-select">-->
-                <!--                            <option value="EHIC">EHIC</option>-->
-                <!--                            <option value="PDA1">PDA1</option>-->
-                <!--                        </select>-->
-                <!--                    </div>-->
-                <!--                    <div class="control">-->
-                <!--                        <button id="fetch-document-by-id-btn" onclick="fetchDocumentById()" class="button" disabled>-->
-                <!--                            Fetch-->
-                <!--                        </button>-->
-                <!--                    </div>-->
-                <!--                </div>-->
-
-
                 <div id="navbar-demo-div" class="navbar-item field has-addons box">
                     <div class="control">
-                        <!-- TODO: se över onkeyup efter updateFetchDocumentByIdButton(); och flytta ev. logiken till en func eller liknande, kanske i samma ?-->
                         <input id="authentic_source_person_id-input" onkeyup="updateUploadAndFetchButtons()"
                                class="input" type="text"
                                placeholder="Authentic source person id">
@@ -736,7 +565,6 @@
                     </div>
                 </div>
 
-
             </div>
 
             <div id="navbar-end-div" class="navbar-end">
@@ -756,8 +584,8 @@
         </div>
     </nav>
 </div>
+<!-- TOP MENY END -->
 
-<div id="global-error-container"></div>
 <div id="login-container"></div>
 <div id="article-container"></div>
 
