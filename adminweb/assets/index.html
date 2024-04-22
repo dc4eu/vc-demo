@@ -132,7 +132,7 @@
     function buildResponseMeta(response) {
         const status = response.status; //
         const statusText = response.statusText;
-        const respUrl = response.url;
+        //const respUrl = response.url;
         const contentType = response.headers.get('Content-Type');
         return `Response status: ${status} (${statusText}), Content-Type: ${contentType}`;
     }
