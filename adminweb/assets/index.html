@@ -281,9 +281,9 @@
         //<button onClick="toggleContent('article-6')" className="toggle-button">Toggle</button>
         const expandCollapseButton = document.createElement('button');
         expandCollapseButton.onclick = () => toggleExpandCollapseArticle(articleID);
-        expandCollapseButton.classList.add("button", "is-text", "is-medium");
+        expandCollapseButton.classList.add("button", "is-dark");
         expandCollapseButton.textContent = "Collapse/Expand"
-        expandCollapseButton.ariaLabel = "toggle expand/collapse"
+        expandCollapseButton.ariaLabel = "toggle collapse/expand"
 
         const removeButton = document.createElement('button');
         removeButton.onclick = () => removeElementById(articleID);
