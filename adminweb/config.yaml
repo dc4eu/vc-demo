@@ -1,5 +1,5 @@
 ---
-web1:
+ui:
   username: "admin"
   password: "secret123"
   #It is recommended to use an authentication key with 32 or 64 bytes.

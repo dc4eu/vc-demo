@@ -10,7 +10,7 @@ COPY . .
 # Build app
 #mount=type=cache,target=/root/.cache/go-build --
 #--mount=type=cache,target=/root/.cache/go-build     
-RUN GOOS=linux GOARCH=amd64 go build -v -o bin/vc_ui -ldflags "-w -s --extldflags '-static'" ./cmd/main.go
+RUN GOOS=linux GOARCH=amd64 go build -v -o bin/vc_ui -ldflags "-w -s --extldflags '-static'" ./cmd/ui/main.go
 
 # OS
 FROM debian:bookworm-slim
@@ -29,7 +29,7 @@ RUN rm -rf /var/lib/apt/lists/*
 
 # Copy the compiled app and HMTL files from previous build step
 COPY --from=builder /go/src/app/bin/vc_ui /vc_ui
-COPY --from=builder /go/src/app/assets /assets/
+COPY --from=builder /go/src/app/internal/ui/static /static/
 
 # Expose port 8080
 EXPOSE 8080

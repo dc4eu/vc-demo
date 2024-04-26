@@ -13,8 +13,8 @@ type Common struct {
 	Log        Log    `yaml:"log"`
 }
 
-type Web1 struct {
-	// Login: user and password
+type UI struct {
+	// Login: user and pwd
 	Username                       string `yaml:"username" validate:"required"`
 	Password                       string `yaml:"password" validate:"required"`
 	SessionCookieAuthenticationKey string `yaml:"session_cookie_authentication_key" validate:"required"`
@@ -32,5 +32,5 @@ type Web1 struct {
 // Cfg is the main configuration structure for this application
 type Cfg struct {
 	Common Common `yaml:"common"`
-	Web1   Web1   `yaml:"web1"`
+	UI     UI     `yaml:"ui"`
 }

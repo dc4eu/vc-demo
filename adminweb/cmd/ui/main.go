@@ -17,6 +17,22 @@ import (
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	//"bytes"
+	//"context"
+	//"encoding/json"
+	//"io"
+	//"log"
+	//"net/http"
+	//"strings"
+	//"vcweb1/pkg/configuration"
+	//"vcweb1/pkg/logger"
+	//"vcweb1/pkg/model"
+	//
+	//"github.com/gin-contrib/gzip"
+	//"github.com/gin-contrib/sessions"
+	//"github.com/gin-contrib/sessions/cookie"
+	//"github.com/gin-gonic/gin"
+	//"github.com/google/uuid"
 )
 
 //TODO: add logging
@@ -32,7 +48,16 @@ const (
 	sessionSameSite                   = http.SameSiteStrictMode
 )
 
+type service interface {
+	Close(ctx context.Context) error
+}
+
 func main() {
+	engine()
+	//TODO ersätt engine med koncept enligt main i vc (behöver få in masv's grejor först så jag kan köra go mod tidy och go mod vendor där)
+}
+
+func engine() {
 	ctx := context.Background()
 	cfg, err := configuration.Parse(ctx, logger.NewSimple("Configuration"))
 	if err != nil {
@@ -47,8 +72,8 @@ func main() {
 	router.Use(setupSessionMiddleware(cfg))
 
 	// Static route
-	router.Static("/assets", "./assets")
-	router.LoadHTMLFiles("./assets/index.html")
+	router.Static("/static", "./static")
+	router.LoadHTMLFiles("./static/index.html")
 	router.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", nil)
 	})
@@ -78,7 +103,7 @@ func main() {
 func createMockHandler(cfg *model.Cfg, client *http.Client) gin.HandlerFunc {
 	//closure
 	return func(c *gin.Context) {
-		url := cfg.Web1.Services.MockAS.Addr + "/api/v1/mock/next"
+		url := cfg.UI.Services.MockAS.Addr + "/api/v1/mock/next"
 		doPostForDemoFlows(c, url, client)
 	}
 }
@@ -86,7 +111,7 @@ func createMockHandler(cfg *model.Cfg, client *http.Client) gin.HandlerFunc {
 func fetchFromPortalHandler(cfg *model.Cfg, client *http.Client) gin.HandlerFunc {
 	//closure
 	return func(c *gin.Context) {
-		url := cfg.Web1.Services.APIGW.Addr + "/api/v1/portal"
+		url := cfg.UI.Services.APIGW.Addr + "/api/v1/portal"
 		doPostForDemoFlows(c, url, client)
 	}
 }
@@ -154,7 +179,7 @@ func setupSessionMiddleware(cfg *model.Cfg) gin.HandlerFunc {
 func configureSessionStore(cfg *model.Cfg) sessions.Store {
 	//The first parameter is used to encrypt and decrypt cookies.
 	//The second parameter is used internally by cookie.Store to handle the encryption and decryption process
-	store := cookie.NewStore([]byte(cfg.Web1.SessionCookieAuthenticationKey), []byte(cfg.Web1.SessionStoreEncryptionKey))
+	store := cookie.NewStore([]byte(cfg.UI.SessionCookieAuthenticationKey), []byte(cfg.UI.SessionStoreEncryptionKey))
 	store.Options(sessions.Options{
 		Path:     sessionPath,
 		MaxAge:   sessionInactivityTimeoutInSeconds,
@@ -214,7 +239,7 @@ func loginHandler(cfg *model.Cfg) func(c *gin.Context) {
 			return
 		}
 
-		if loginBody.Username != cfg.Web1.Username || loginBody.Password != cfg.Web1.Password {
+		if loginBody.Username != cfg.UI.Username || loginBody.Password != cfg.UI.Password {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication failed"})
 			return
 		}
@@ -262,7 +287,7 @@ func getUserHandler(c *gin.Context) {
 
 func getHealthHandler(cfg *model.Cfg, client *http.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		url := cfg.Web1.Services.APIGW.Addr + "/health"
+		url := cfg.UI.Services.APIGW.Addr + "/health"
 
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {

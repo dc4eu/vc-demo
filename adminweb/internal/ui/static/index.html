@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en" class="theme-light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VC UI</title>
+    <script src="/static/ui.js"></script>
+    <!--    <script src="ui.js"></script>-->
+    <link rel="stylesheet" href="/static/bulma.min.css">
+    <!--    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css">-->
+    <!--TODO: create and add favico to /static/ -->
+    <!--    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">-->
+</head>
+
+<body>
+
+<!-- TOP MENY START -->
+<div class="box">
+    <nav id="nav-nav" class="navbar" role="navigation" aria-label="main navigation">
+
+        <div id="navbar-brand-div" class="navbar-brand">
+            <p class="navbar-item is-info"><b>VC UI</b></p>
+        </div>
+
+        <!-- TODO: handle menyitems when window is made smaller (now some of them disappear) -->
+
+        <div id="navbar-div" class="navbar-menu">
+
+            <div id="navbar-start-div" class="navbar-start">
+                <a id="fetch-health-btn" onclick="getAndDisplayInArticleContainerFor('/secure/health','Health')"
+                   class="navbar-item">
+                    Health
+                </a>
+                <a onclick="clearAllContentContainers()" class="navbar-item"> Clear
+                </a>
+                <div class="navbar-item has-dropdown is-hoverable">
+                    <a class="navbar-link">
+                        Dev/test support
+                    </a>
+                    <div class="navbar-dropdown">
+                        <a id="toggle-theme-btn"
+                           onclick="toogleThemeDarkLight()"
+                           class="navbar-item">
+                            Toogle theme (dark/light)
+                        </a>
+                        <a id="fetch-user-btn" onclick="getAndDisplayInArticleContainerFor('/secure/user','User')"
+                           class="navbar-item">
+                            Current User
+                        </a>
+                    </div>
+                </div>
+
+                <div id="navbar-demo-div" class="navbar-item field has-addons box">
+                    <div class="control">
+                        <input id="authentic_source_person_id-input"
+                               onkeyup="updateUploadAndFetchButtons()"
+                               class="input" type="text"
+                               placeholder="Authentic source person id">
+                    </div>
+                    <div class="select">
+                        <select id="document-type-select">
+                            <option value="EHIC">EHIC</option>
+                            <option value="PDA1">PDA1</option>
+                        </select>
+                    </div>
+                    <div class="control">
+                        <input id="authentic-source-input"
+                               class="input" type="text" placeholder="Authentic source" value="SUNET" disabled>
+                    </div>
+                    <div class="control">
+                        <button id="create-mock-btn" onclick="createMock()" class="button" disabled>
+                            Upload
+                        </button>
+                    </div>
+                    <div class="control">
+                        <button id="fetch-from-portal-btn" onclick="fetchFromPortal()" class="button" disabled>
+                            Fetch
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <div id="navbar-end-div" class="navbar-end">
+                <div class="navbar-item">
+                    <div class="buttons">
+                        <a id="show-login-form-btn" onclick="addLoginArticleToContainer()" class="button is-primary"
+                           style="display: inline;">
+                            <strong>Login</strong>
+                        </a>
+                        <a id="do-logout-btn" onclick="doLogout()" class="button" style="display: none;">
+                            Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </nav>
+</div>
+<!-- TOP MENY END -->
+
+<div id="login-container"></div>
+<div id="article-container"></div>
+
+</body>
+
+</html>
