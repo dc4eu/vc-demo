@@ -10,7 +10,7 @@ COPY . .
 # Build app
 #mount=type=cache,target=/root/.cache/go-build --
 #--mount=type=cache,target=/root/.cache/go-build     
-RUN GOOS=linux GOARCH=amd64 go build -v -o bin/vc_web1 -ldflags "-w -s --extldflags '-static'" ./cmd/main.go
+RUN GOOS=linux GOARCH=amd64 go build -v -o bin/vc_ui -ldflags "-w -s --extldflags '-static'" ./cmd/main.go
 
 # OS
 FROM debian:bookworm-slim
@@ -28,14 +28,14 @@ RUN rm -rf /var/lib/apt/lists/*
 #RUN npm install uuid-random
 
 # Copy the compiled app and HMTL files from previous build step
-COPY --from=builder /go/src/app/bin/vc_web1 /vc_web1
+COPY --from=builder /go/src/app/bin/vc_ui /vc_ui
 COPY --from=builder /go/src/app/assets /assets/
 
 # Expose port 8080
 EXPOSE 8080
 
 # Run webservern
-CMD ["./vc_web1"]
+CMD ["./vc_ui"]
 
 # Build image
 # docker build --tag docker.sunet.se/dc4eu/web1:latest .

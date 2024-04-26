@@ -91,9 +91,9 @@ services:
     environment:
       - "VC_CONFIG_YAML=config.yaml"
 
-  web1:
-    container_name: "vc_web_web1"
-    image: docker.sunet.se/dc4eu/web1:demo-v3
+  ui:
+    container_name: "vc_web_ui"
+    image: docker.sunet.se/dc4eu/ui:demo-v3
     restart: always
     volumes:
       - ./config.yaml:/config.yaml:ro
@@ -148,7 +148,7 @@ networks:
   vc-net:
     driver: bridge
     driver_opts:
-      com.docker.network.bridge.name: br-vc-web1
+      com.docker.network.bridge.name: br-vc-ui
     ipam:
       driver: default
       config:

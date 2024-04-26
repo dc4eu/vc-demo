@@ -1,10 +1,10 @@
-docker-build-web1:
+docker-build-ui:
 	$(info Docker Building web1 with tag: $(VERSION))
-	docker build --tag docker.sunet.se/dc4eu/web1:demo-v3 .
+	docker build --tag docker.sunet.se/dc4eu/ui:demo-v3 .
 
-docker-push-web1:
+docker-push-ui:
 	$(info Pushing docker images)
-	docker push docker.sunet.se/dc4eu/web1:demo-v3
+	docker push docker.sunet.se/dc4eu/ui:demo-v3
 
 start:
 	$(info Run!)
